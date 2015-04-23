@@ -37,6 +37,7 @@ private:
 
 	float genRand();
 	float genRand(float a, float b);
+	float genRandV(float a, float b);
 	float deg2rad(float deg);
 };
 

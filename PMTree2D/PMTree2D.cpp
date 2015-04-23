@@ -1,6 +1,7 @@
 ﻿#include "PMTree2D.h"
 #include <QGLWidget>
 #include <iostream>
+#include <time.h>
 
 #define M_PI	3.141592653589
 
@@ -19,25 +20,33 @@ PMTree2D::PMTree2D() {
 
 	base[0] = 0.3;
 	curve[0] = 0;
-	curveV[0] = 4;
+	curveV[0] = 20;
 
 	base[1] = 0.2;
-	curve[1] = 10;
+	curve[1] = 20;
 	curveV[1] = 4;
-	branches[1] = 30;
-	downAngle[1] = 75;
+	branches[1] = 20;
+	downAngle[1] = 60;
 	ratio[1] = 0.5;
 
 	curve[2] = 10;
 	curveV[2] = 4;
-	branches[2] = 25;
+	branches[2] = 20;
 	downAngle[2] = 35;
-	ratio[2] = 0.4;
+	ratio[2] = 0.5;
 
 	colorStem = QColor(30, 162, 0);
 }
 
+/**
+ * 木の2Dモデルを生成する。
+ * ただし、物理的な有り得ない形状の場合は、falseを返却する。
+ *
+ * @return		true - 物理的にOK / false - 物理的にNG
+ */
 bool PMTree2D::generate() {
+	srand(0);
+
 	float radius0 = 0.15;
 	float length0 = 10.0;
 
@@ -49,6 +58,7 @@ bool PMTree2D::generate() {
 	mat4 modelMat;
 	generateStem(0, modelMat, radius0, length0);
 
+	/*
 	cout << "Total Length:" << endl;
 	for (int i = 0; i < levels + 1; ++i) {
 		cout << "[" << i << "]: " << totalLength[i] << endl;
@@ -57,11 +67,13 @@ bool PMTree2D::generate() {
 	for (int i = 0; i < levels + 1; ++i) {
 		cout << "[" << i << "]: " << totalVolume[i] << endl;
 	}
+	*/
 	
 	if (2 * (totalLength[0] + totalLength[1]) > totalLength[2]) {
-		cout << "too few leaves!" << endl;
+		//cout << "too few leaves!" << endl;
 		return false;
 	}
+	/*
 	if (totalVolume[0] < 2 * (totalVolume[1] + totalVolume[2])) {
 		cout << "too many branches!" << endl;
 		return false;
@@ -70,6 +82,7 @@ bool PMTree2D::generate() {
 		cout << "too many leaves!" << endl;
 		return false;
 	}
+	*/
 
 	// ToDo
 	// conflictチェック！
@@ -78,19 +91,24 @@ bool PMTree2D::generate() {
 }
 
 void PMTree2D::randomInit() {
-	base[0] = (float)rand() / RAND_MAX * 0.7;
-	curve[0] = ((float)rand() / RAND_MAX - 0.5) * 40;
+	//srand((unsigned int)time(NULL));
 
-	base[1] = (float)rand() / RAND_MAX * 0.7;
-	curve[1] = ((float)rand() / RAND_MAX - 0.5) * 240;
-	branches[1] = (float)rand() / RAND_MAX * 40 + 10;
-	downAngle[1] = (float)rand() / RAND_MAX * 80;
-	ratio[1] = (float)rand() / RAND_MAX * 0.9 + 0.1;
+	base[0] = genRand(0, 0.5);
+	curve[0] = genRand(-30, 30);
+	curveV[0] = genRand(0, 100);
 
-	curve[2] = ((float)rand() / RAND_MAX - 0.5) * 240;
-	branches[2] = (float)rand() / RAND_MAX * 40 + 10;
-	downAngle[2] = (float)rand() / RAND_MAX * 80;
-	ratio[2] = (float)rand() / RAND_MAX * 0.9 + 0.1;
+	base[1] = genRand(0, 0.5);
+	curve[1] = genRand(-110, 110);
+	curveV[1] = genRand(0, 100);
+	branches[1] = genRand(10, 40);
+	downAngle[1] = genRand(20, 70);
+	ratio[1] = genRand(0.3, 0.7);
+
+	curve[2] = genRand(-110, 110);
+	curveV[2] = genRand(0, 100);
+	branches[2] = genRand(10, 40);
+	downAngle[2] = genRand(10, 50);
+	ratio[2] = genRand(0.3, 0.7);
 }
 
 void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float length) {
@@ -100,17 +118,18 @@ void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float l
 	for (int i = 0; i < curveRes; ++i) {
 		float r1 = radius * (curveRes - i) / curveRes;
 		float r2 = radius * (curveRes - i - 1) / curveRes;
-		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(0, 200 * i / curveRes, 0, 0));
+		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(0, 160 * i / curveRes, 0));
 
-		modelMat = translate(modelMat, vec3(0, segment_length, 0));
-
-		
-		modelMat = rotate(modelMat, deg2rad(genRand(curve[level] / curveRes, curveV[level] / curveRes)), vec3(0, 0, 1));
+		modelMat = translate(modelMat, vec3(0, segment_length, 0));		
+		modelMat = rotate(modelMat, deg2rad(genRandV(curve[level] / curveRes, curveV[level] / curveRes)), vec3(0, 0, 1));
 		//modelMat = rotate(modelMat, deg2rad(rot), vec3(0, 1, 0));
 	}
 }
 
 void PMTree2D::generateSegment(int level, int index, mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color) {
+	radius1 = max(radius1, 0.001);
+	radius2 = max(radius2, 0.001);
+
 	drawQuad(modelMat, radius2 * 2, radius1 * 2, segment_length, color);
 	totalLength[level] += segment_length;
 	totalVolume[level] += segment_length * (radius1 * radius1);
@@ -178,10 +197,14 @@ float PMTree2D::genRand() {
 	return rand() / (float(RAND_MAX) + 1);
 }
 
+float PMTree2D::genRand(float a, float b) {
+	return genRand() * (b - a) + a;
+}
+
 /**
  * meanを中心とし、varianceの幅でuniformに乱数を生成する。
  */
-float PMTree2D::genRand(float mean, float variance) {
+float PMTree2D::genRandV(float mean, float variance) {
 	return genRand() * variance * 2.0 + mean - variance;
 }
 

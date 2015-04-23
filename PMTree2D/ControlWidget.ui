@@ -26,7 +26,7 @@
       <x>10</x>
       <y>10</y>
       <width>201</width>
-      <height>71</height>
+      <height>91</height>
      </rect>
     </property>
     <property name="title">
@@ -84,14 +84,40 @@
       <string>curve:</string>
      </property>
     </widget>
+    <widget class="QLabel" name="label_4">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>51</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>curveV:</string>
+     </property>
+    </widget>
+    <widget class="QSlider" name="horizontalSliderCurveV0">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>60</y>
+       <width>121</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>90</y>
+      <y>110</y>
       <width>201</width>
-      <height>131</height>
+      <height>151</height>
      </rect>
     </property>
     <property name="title">
@@ -153,7 +179,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>60</y>
+       <y>80</y>
        <width>51</width>
        <height>16</height>
       </rect>
@@ -166,7 +192,7 @@
      <property name="geometry">
       <rect>
        <x>70</x>
-       <y>60</y>
+       <y>80</y>
        <width>121</width>
        <height>20</height>
       </rect>
@@ -179,7 +205,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>80</y>
+       <y>100</y>
        <width>51</width>
        <height>16</height>
       </rect>
@@ -192,7 +218,7 @@
      <property name="geometry">
       <rect>
        <x>70</x>
-       <y>80</y>
+       <y>100</y>
        <width>121</width>
        <height>20</height>
       </rect>
@@ -205,7 +231,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>100</y>
+       <y>120</y>
        <width>51</width>
        <height>16</height>
       </rect>
@@ -218,7 +244,33 @@
      <property name="geometry">
       <rect>
        <x>70</x>
-       <y>100</y>
+       <y>120</y>
+       <width>121</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_13">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>51</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>curveV:</string>
+     </property>
+    </widget>
+    <widget class="QSlider" name="horizontalSliderCurveV1">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>60</y>
        <width>121</width>
        <height>20</height>
       </rect>
@@ -232,9 +284,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>230</y>
+      <y>270</y>
       <width>201</width>
-      <height>111</height>
+      <height>131</height>
      </rect>
     </property>
     <property name="title">
@@ -270,7 +322,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>40</y>
+       <y>60</y>
        <width>51</width>
        <height>16</height>
       </rect>
@@ -283,7 +335,7 @@
      <property name="geometry">
       <rect>
        <x>70</x>
-       <y>40</y>
+       <y>60</y>
        <width>121</width>
        <height>20</height>
       </rect>
@@ -296,7 +348,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>60</y>
+       <y>80</y>
        <width>51</width>
        <height>16</height>
       </rect>
@@ -309,7 +361,7 @@
      <property name="geometry">
       <rect>
        <x>70</x>
-       <y>60</y>
+       <y>80</y>
        <width>121</width>
        <height>20</height>
       </rect>
@@ -322,7 +374,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>80</y>
+       <y>100</y>
        <width>51</width>
        <height>16</height>
       </rect>
@@ -335,7 +387,33 @@
      <property name="geometry">
       <rect>
        <x>70</x>
-       <y>80</y>
+       <y>100</y>
+       <width>121</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_19">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>51</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>curveV:</string>
+     </property>
+    </widget>
+    <widget class="QSlider" name="horizontalSliderCurveV2">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>40</y>
        <width>121</width>
        <height>20</height>
       </rect>
