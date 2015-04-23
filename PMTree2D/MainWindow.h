@@ -10,14 +10,16 @@ class MainWindow : public QMainWindow {
 	Q_OBJECT
 
 public:
+	Ui::MainWindowClass ui;
 	GLWidget3D* glWidget;
 	ControlWidget* controlWidget;
 
 public:
 	MainWindow(QWidget *parent = 0, Qt::WFlags flags = 0);
 
-private:
-	Ui::MainWindowClass ui;
+public slots:
+	void onGenerateRandom();
+	void onGenerateSamples();
 };
 
 #endif // MAINWINDOW_H

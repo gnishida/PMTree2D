@@ -14,7 +14,7 @@ private:
 public:
 	Ui::ControlWidget ui;
 	ControlWidget(MainWindow* mainWin);
-	void init();
+	void update();
 
 public slots:
 	void onValueChanged();

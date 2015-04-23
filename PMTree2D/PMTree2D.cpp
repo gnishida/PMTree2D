@@ -1,36 +1,30 @@
 ﻿#include "PMTree2D.h"
 #include <QGLWidget>
+#include <iostream>
 
 #define M_PI	3.141592653589
 
 using namespace glm;
 
 PMTree2D::PMTree2D() {
+	curveRes = 10;
 	levels = 2;
 
 	base.resize(levels + 1);
-	curveRes.resize(levels + 1);
 	curve.resize(levels + 1);
 	branches.resize(levels + 1);
 	downAngle.resize(levels + 1);
 	ratio.resize(levels + 1);
 
-	base[0] = 0.4;
-	curveRes[0] = 3;
+	base[0] = 0.3;
 	curve[0] = 2;
-	//branches[0] = 0;
-	//downAngle[0] = 0;
-	//ratio[0] = 0;
 
 	base[1] = 0.2;
-	curveRes[1] = 5;
 	curve[1] = 4;
 	branches[1] = 30;
 	downAngle[1] = 75;
 	ratio[1] = 0.5;
 
-	base[2] = 0.2;
-	curveRes[2] = 3;
 	curve[2] = 4;
 	branches[2] = 25;
 	downAngle[2] = 35;
@@ -39,31 +33,79 @@ PMTree2D::PMTree2D() {
 	colorStem = QColor(30, 162, 0);
 }
 
-void PMTree2D::generate() {
+bool PMTree2D::generate() {
 	float radius0 = 0.25;
 	float length0 = 10.0;
+
+	totalLength.clear();
+	totalLength.resize(levels + 1, 0);
+	totalVolume.clear();
+	totalVolume.resize(levels + 1, 0);
 	
 	mat4 modelMat;
 	generateStem(0, modelMat, radius0, length0);
+
+	cout << "Total Length:" << endl;
+	for (int i = 0; i < levels + 1; ++i) {
+		cout << "[" << i << "]: " << totalLength[i] << endl;
+	}
+	cout << "Total Volume:" << endl;
+	for (int i = 0; i < levels + 1; ++i) {
+		cout << "[" << i << "]: " << totalVolume[i] << endl;
+	}
+	
+	if (2 * (totalLength[0] + totalLength[1]) > totalLength[2]) {
+		cout << "too few leaves!" << endl;
+		return false;
+	}
+	if (totalVolume[0] < 2 * (totalVolume[1] + totalVolume[2])) {
+		cout << "too many branches!" << endl;
+		return false;
+	}
+	if (totalVolume[1] < 2 * totalVolume[2]) {
+		cout << "too many leaves!" << endl;
+		return false;
+	}
+
+	// ToDo
+	// conflictチェック！
+}
+
+void PMTree2D::randomInit() {
+	base[0] = (float)rand() / RAND_MAX * 0.7;
+	curve[0] = ((float)rand() / RAND_MAX - 0.5) * 40;
+
+	base[1] = (float)rand() / RAND_MAX * 0.7;
+	curve[1] = ((float)rand() / RAND_MAX - 0.5) * 240;
+	branches[1] = (float)rand() / RAND_MAX * 40 + 10;
+	downAngle[1] = (float)rand() / RAND_MAX * 80;
+	ratio[1] = (float)rand() / RAND_MAX * 0.9 + 0.1;
+
+	curve[2] = ((float)rand() / RAND_MAX - 0.5) * 240;
+	branches[2] = (float)rand() / RAND_MAX * 40 + 10;
+	downAngle[2] = (float)rand() / RAND_MAX * 80;
+	ratio[2] = (float)rand() / RAND_MAX * 0.9 + 0.1;
 }
 
 void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float length) {
-	float segment_length = length / curveRes[level];
+	float segment_length = length / curveRes;
 
 	int rot = 0;
-	for (int i = 0; i < curveRes[level]; ++i) {
-		float r1 = radius * (curveRes[level] - i) / curveRes[level];
-		float r2 = radius * (curveRes[level] - i - 1) / curveRes[level];
-		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(255 * i / curveRes[level], 0, 255));
+	for (int i = 0; i < curveRes; ++i) {
+		float r1 = radius * (curveRes - i) / curveRes;
+		float r2 = radius * (curveRes - i - 1) / curveRes;
+		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(255 * i / curveRes, 0, 255));
 
 		modelMat = translate(modelMat, vec3(0, segment_length, 0));
-		modelMat = rotate(modelMat, deg2rad(curve[level] / curveRes[level]), vec3(0, 0, 1));
+		modelMat = rotate(modelMat, deg2rad(curve[level] / curveRes), vec3(0, 0, 1));
 		//modelMat = rotate(modelMat, deg2rad(rot), vec3(0, 1, 0));
 	}
 }
 
 void PMTree2D::generateSegment(int level, int index, mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color) {
 	drawQuad(modelMat, radius2 * 2, radius1 * 2, segment_length, color);
+	totalLength[level] += segment_length;
+	totalVolume[level] += segment_length * (radius1 * radius1);
 
 	if (level >= levels) return;
 
@@ -77,7 +119,7 @@ void PMTree2D::generateSegment(int level, int index, mat4 modelMat, float radius
 		}
 	}
 
-	int substems_eff = branches[level + 1] / (float)curveRes[level] * (segment_length - stem_start) / segment_length;
+	int substems_eff = branches[level + 1] / (float)curveRes * (segment_length - stem_start) / segment_length;
 	float interval = (segment_length - stem_start) / substems_eff;
 
 	modelMat = translate(modelMat, vec3(0, stem_start, 0));

@@ -10,20 +10,24 @@ using namespace std;
 
 class PMTree2D {
 public:
+	int curveRes;
 	int levels;
 	vector<float> base;
-	vector<int> curveRes;
 	vector<int> curve;
 	vector<int> branches;
-	vector<float> downAngle;
+	vector<int> downAngle;
 	vector<float> ratio;
 
 	QColor colorStem;
 
+	vector<float> totalLength;
+	vector<float> totalVolume;
+
 public:
 	PMTree2D();
 
-	void generate();
+	bool generate();
+	void randomInit();
 
 private:
 	void generateStem(int level, glm::mat4 modelMat, float radius, float length);
