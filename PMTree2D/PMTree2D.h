@@ -5,6 +5,8 @@
 #include <glm/gtx/string_cast.hpp>
 #include <QColor>
 #include <vector>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
 
 using namespace std;
 
@@ -23,7 +25,11 @@ public:
 
 	vector<float> totalLength;
 	vector<float> totalVolume;
-
+	float maxY;
+	float minX, maxX;
+	cv::Mat_<int> density;
+	vector<float> histogram;
+	
 public:
 	PMTree2D();
 

@@ -16,8 +16,11 @@ public:
 
 public:
 	MainWindow(QWidget *parent = 0, Qt::WFlags flags = 0);
+	
+	void saveImage();
 
 public slots:
+	void onSaveImage();
 	void onGenerateRandom();
 	void onGenerateSamples();
 };

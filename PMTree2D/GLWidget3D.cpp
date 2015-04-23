@@ -2,13 +2,18 @@
 #include "GLWidget3D.h"
 #include "MainWindow.h"
 #include <GL/GLU.h>
+#include <QTimer>
 
 GLWidget3D::GLWidget3D(MainWindow* mainWin) : QGLWidget(QGLFormat(QGL::SampleBuffers), (QWidget*)mainWin) {
 	this->mainWin = mainWin;
-	camera.dz = 20;
+	camera.dz = 10;
 	camera.dy = 5;
 	tree = new PMTree2D();
 	//tree->generate();
+
+	/*QTimer *timer = new QTimer(this);
+	connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+	timer->start(10);*/
 }
 
 /**
