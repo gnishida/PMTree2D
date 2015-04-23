@@ -14,6 +14,7 @@ public:
 	int levels;
 	vector<float> base;
 	vector<int> curve;
+	vector<int> curveV;
 	vector<int> branches;
 	vector<int> downAngle;
 	vector<float> ratio;
@@ -34,6 +35,8 @@ private:
 	void generateSegment(int level, int index, glm::mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color);
 	void drawQuad(const glm::mat4& modelMat, float top, float base, float height, const QColor& color);
 
+	float genRand();
+	float genRand(float a, float b);
 	float deg2rad(float deg);
 };
 

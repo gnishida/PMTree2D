@@ -12,20 +12,24 @@ PMTree2D::PMTree2D() {
 
 	base.resize(levels + 1);
 	curve.resize(levels + 1);
+	curveV.resize(levels + 1);
 	branches.resize(levels + 1);
 	downAngle.resize(levels + 1);
 	ratio.resize(levels + 1);
 
 	base[0] = 0.3;
-	curve[0] = 2;
+	curve[0] = 0;
+	curveV[0] = 4;
 
 	base[1] = 0.2;
-	curve[1] = 4;
+	curve[1] = 10;
+	curveV[1] = 4;
 	branches[1] = 30;
 	downAngle[1] = 75;
 	ratio[1] = 0.5;
 
-	curve[2] = 4;
+	curve[2] = 10;
+	curveV[2] = 4;
 	branches[2] = 25;
 	downAngle[2] = 35;
 	ratio[2] = 0.4;
@@ -34,7 +38,7 @@ PMTree2D::PMTree2D() {
 }
 
 bool PMTree2D::generate() {
-	float radius0 = 0.25;
+	float radius0 = 0.15;
 	float length0 = 10.0;
 
 	totalLength.clear();
@@ -69,6 +73,8 @@ bool PMTree2D::generate() {
 
 	// ToDo
 	// conflictチェック！
+
+	return true;
 }
 
 void PMTree2D::randomInit() {
@@ -94,10 +100,12 @@ void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float l
 	for (int i = 0; i < curveRes; ++i) {
 		float r1 = radius * (curveRes - i) / curveRes;
 		float r2 = radius * (curveRes - i - 1) / curveRes;
-		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(255 * i / curveRes, 0, 255));
+		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(0, 200 * i / curveRes, 0, 0));
 
 		modelMat = translate(modelMat, vec3(0, segment_length, 0));
-		modelMat = rotate(modelMat, deg2rad(curve[level] / curveRes), vec3(0, 0, 1));
+
+		
+		modelMat = rotate(modelMat, deg2rad(genRand(curve[level] / curveRes, curveV[level] / curveRes)), vec3(0, 0, 1));
 		//modelMat = rotate(modelMat, deg2rad(rot), vec3(0, 1, 0));
 	}
 }
@@ -119,8 +127,10 @@ void PMTree2D::generateSegment(int level, int index, mat4 modelMat, float radius
 		}
 	}
 
-	int substems_eff = branches[level + 1] / (float)curveRes * (segment_length - stem_start) / segment_length;
-	float interval = (segment_length - stem_start) / substems_eff;
+	//int substems_eff = branches[level + 1] / (float)curveRes * (segment_length - stem_start) / segment_length;
+	//float interval = (segment_length - stem_start) / substems_eff;
+	float interval = length * (1 - base[level]) / (branches[level + 1] - 1);
+	int substems_eff = (segment_length - stem_start) / interval + 1;
 
 	modelMat = translate(modelMat, vec3(0, stem_start, 0));
 	modelMat = rotate(modelMat, deg2rad(rot), vec3(0, 1, 0));
@@ -159,6 +169,20 @@ void PMTree2D::drawQuad(const mat4& modelMat, float top, float base, float heigh
 	glVertex3f(p3.x, p3.y, p3.z);
 	glVertex3f(p4.x, p4.y, p4.z);
 	glEnd();
+}
+
+/**
+ * Uniform乱数[0, 1)を生成する
+ */
+float PMTree2D::genRand() {
+	return rand() / (float(RAND_MAX) + 1);
+}
+
+/**
+ * meanを中心とし、varianceの幅でuniformに乱数を生成する。
+ */
+float PMTree2D::genRand(float mean, float variance) {
+	return genRand() * variance * 2.0 + mean - variance;
 }
 
 float PMTree2D::deg2rad(float deg) {

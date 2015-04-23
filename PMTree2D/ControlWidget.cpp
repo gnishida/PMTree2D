@@ -9,21 +9,23 @@ ControlWidget::ControlWidget(MainWindow* mainWin) : QDockWidget("Control Widget"
 	// set up the UI
 	ui.setupUi(this);
 
-	ui.horizontalSliderCurve0->setMinimum(-180);
-	ui.horizontalSliderCurve0->setMaximum(180);
+	ui.horizontalSliderBase0->setMaximum(60);
+	ui.horizontalSliderCurve0->setMinimum(-100);
+	ui.horizontalSliderCurve0->setMaximum(100);
 
-	ui.horizontalSliderCurve1->setMinimum(-180);
-	ui.horizontalSliderCurve1->setMaximum(180);
-	ui.horizontalSliderBranches1->setMinimum(0);
-	ui.horizontalSliderBranches1->setMaximum(50);
-	ui.horizontalSliderDownAngle1->setMinimum(0);
+	ui.horizontalSliderBase1->setMaximum(60);
+	ui.horizontalSliderCurve1->setMinimum(-110);
+	ui.horizontalSliderCurve1->setMaximum(110);
+	ui.horizontalSliderBranches1->setMinimum(10);
+	ui.horizontalSliderBranches1->setMaximum(40);
+	ui.horizontalSliderDownAngle1->setMinimum(20);
 	ui.horizontalSliderDownAngle1->setMaximum(90);
 
-	ui.horizontalSliderCurve2->setMinimum(-180);
-	ui.horizontalSliderCurve2->setMaximum(180);
-	ui.horizontalSliderBranches2->setMinimum(0);
-	ui.horizontalSliderBranches2->setMaximum(50);
-	ui.horizontalSliderDownAngle2->setMinimum(0);
+	ui.horizontalSliderCurve2->setMinimum(-110);
+	ui.horizontalSliderCurve2->setMaximum(110);
+	ui.horizontalSliderBranches2->setMinimum(10);
+	ui.horizontalSliderBranches2->setMaximum(40);
+	ui.horizontalSliderDownAngle2->setMinimum(20);
 	ui.horizontalSliderDownAngle2->setMaximum(90);
 
 	update();
