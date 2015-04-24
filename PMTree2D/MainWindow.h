@@ -24,6 +24,7 @@ public slots:
 	void onGenerateRandom();
 	void onGenerateSamples();
 	void onInversePMByLinearRegression();
+	void onInversePMByLinearRegression2();
 };
 
 #endif // MAINWINDOW_H

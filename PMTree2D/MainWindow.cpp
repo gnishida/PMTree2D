@@ -12,7 +12,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WFlags flags) : QMainWindow(parent, 
 	connect(ui.actionGenerateRandom, SIGNAL(triggered()), this, SLOT(onGenerateRandom()));
 	connect(ui.actionGenerateSamples, SIGNAL(triggered()), this, SLOT(onGenerateSamples()));
 	connect(ui.actionInversePMByLinearRegression, SIGNAL(triggered()), this, SLOT(onInversePMByLinearRegression()));
-	
+	connect(ui.actionInversePMByLinearRegression2, SIGNAL(triggered()), this, SLOT(onInversePMByLinearRegression2()));
 
 	glWidget = new GLWidget3D(this);
 	setCentralWidget(glWidget);
@@ -102,9 +102,11 @@ void MainWindow::onGenerateSamples() {
 /**
  * 1000個のサンプルを生成して、対応するhigh-level indicatorを計算し、
  * inverseマッピングをlinear regressionにより求める。
+ * high-level indicatorとして、以下を使用する。
+ *    height, width, coverage ratio
  */
 void MainWindow::onInversePMByLinearRegression() {
-	const int N = 1000;
+	const int N = 10000;
 
 	if (!QDir("samples").exists()) QDir().mkdir("samples");
 
@@ -122,7 +124,7 @@ void MainWindow::onInversePMByLinearRegression() {
 
 		if ((iter + 1) % 100 == 0) {
 			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter) + ".png";
+			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 
@@ -150,14 +152,14 @@ void MainWindow::onInversePMByLinearRegression() {
 	glWidget->update();
 	controlWidget->update();
 
-	// normalizationもどき
+	// normalizationもどき（分散は考慮していない。分散を1にすべき？)
 	cv::Mat_<float> muX, muY;
 	cv::reduce(dataX, muX, 0, CV_REDUCE_AVG);
 	cv::reduce(dataY, muY, 0, CV_REDUCE_AVG);
 	cv::Mat_<float> dataX2 = dataX - cv::repeat(muX, N, 1);
 	cv::Mat_<float> dataY2 = dataY - cv::repeat(muY, N, 1);
 	for (int r = 0; r < N; ++r) {
-		dataY2(r, 3) = 1;
+		dataY2(r, dataY2.cols - 1) = 1;
 	}
 
 	// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
@@ -173,7 +175,97 @@ void MainWindow::onInversePMByLinearRegression() {
 
 		glWidget->tree->setParam(x_hat);
 		glWidget->updateGL();
-		QString fileName = "samples/reversed_" + QString::number(index) + ".png";
+		QString fileName = "samples/reversed_" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
+	}
+}
+
+/**
+ * 1000個のサンプルを生成して、対応するhigh-level indicatorを計算し、
+ * inverseマッピングをlinear regressionにより求める。
+ * high-level indicatorとして、以下を使用する。
+ *    height, width, coverage ratio, 密度ごとのhistogram
+ */
+void MainWindow::onInversePMByLinearRegression2() {
+	const int N = 10000;
+
+	if (!QDir("samples").exists()) QDir().mkdir("samples");
+
+	cout << "Generating samples..." << endl;
+
+	cv::Mat_<float> dataX(N, 14);
+	cv::Mat_<float> dataY(N, 13);
+	for (int iter = 0; iter < N; ++iter) {
+		cout << iter << endl;
+
+		while (true) {
+			glWidget->tree->randomInit();
+			if (glWidget->tree->generate()) break;
+		}
+
+		if ((iter + 1) % 100 == 0) {
+			glWidget->updateGL();
+			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
+			glWidget->grabFrameBuffer().save(fileName);
+		}
+
+		dataX(iter, 0) = glWidget->tree->base[0];
+		dataX(iter, 1) = glWidget->tree->curve[0];
+		dataX(iter, 2) = glWidget->tree->curveV[0];
+		dataX(iter, 3) = glWidget->tree->base[1];
+		dataX(iter, 4) = glWidget->tree->curve[1];
+		dataX(iter, 5) = glWidget->tree->curveV[1];
+		dataX(iter, 6) = glWidget->tree->branches[1];
+		dataX(iter, 7) = glWidget->tree->downAngle[1];
+		dataX(iter, 8) = glWidget->tree->ratio[1];
+		dataX(iter, 9) = glWidget->tree->curve[2];
+		dataX(iter, 10) = glWidget->tree->curveV[2];
+		dataX(iter, 11) = glWidget->tree->branches[2];
+		dataX(iter, 12) = glWidget->tree->downAngle[2];
+		dataX(iter, 13) = glWidget->tree->ratio[2];
+
+		dataY(iter, 0) = glWidget->tree->maxY;
+		dataY(iter, 1) = glWidget->tree->maxX - glWidget->tree->minX;
+		dataY(iter, 2) = glWidget->tree->histogram[0];
+		dataY(iter, 3) = glWidget->tree->histogram[1];
+		dataY(iter, 4) = glWidget->tree->histogram[2];
+		dataY(iter, 5) = glWidget->tree->histogram[3];
+		dataY(iter, 6) = glWidget->tree->histogram[4];
+		dataY(iter, 7) = glWidget->tree->histogram[5];
+		dataY(iter, 8) = glWidget->tree->histogram[6];
+		dataY(iter, 9) = glWidget->tree->histogram[7];
+		dataY(iter, 10) = glWidget->tree->histogram[8];
+		dataY(iter, 11) = glWidget->tree->histogram[9];
+		dataY(iter, 12) = 1; // 定数項
+	}
+
+	glWidget->update();
+	controlWidget->update();
+
+	// normalizationもどき
+	cv::Mat_<float> muX, muY;
+	cv::reduce(dataX, muX, 0, CV_REDUCE_AVG);
+	cv::reduce(dataY, muY, 0, CV_REDUCE_AVG);
+	cv::Mat_<float> dataX2 = dataX - cv::repeat(muX, N, 1);
+	cv::Mat_<float> dataY2 = dataY - cv::repeat(muY, N, 1);
+	for (int r = 0; r < N; ++r) {
+		dataY2(r, dataY2.cols - 1) = 1;
+	}
+
+	// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
+	cv::Mat_<float> W = dataY2.inv(cv::DECOMP_SVD) * dataX2;
+
+	// reverseで木を生成する
+	for (int iter = 0; iter < 10; ++iter) {
+		int index = iter * 100 + 99;
+
+		cout << iter << ": " << dataY2.row(index) << endl;
+		cv::Mat x_hat = dataY2.row(index) * W + muX;
+		cout << "x_hat: " << x_hat << endl;
+
+		glWidget->tree->setParam(x_hat);
+		glWidget->updateGL();
+		QString fileName = "samples/reversed_" + QString::number(iter) + ".png";
 		glWidget->grabFrameBuffer().save(fileName);
 	}
 }
