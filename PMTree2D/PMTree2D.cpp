@@ -5,6 +5,17 @@
 
 #define M_PI	3.141592653589
 
+void PMTree2DStats::clear() {
+	totalLength.clear();
+	totalVolume.clear();
+	maxY = 0.0f;
+	minX = 0.0f;
+	maxX = 0.0f;
+	avg_curvature = 0.0f;
+	density_histogram.clear();
+	curvature_histogram.clear();
+}
+
 PMTree2D::PMTree2D() {
 	curveRes = 10;
 	levels = 2;
@@ -49,14 +60,11 @@ bool PMTree2D::generate() {
 	float length0 = 10.0;
 
 	// 統計情報をクリア
-	totalLength.clear();
-	totalLength.resize(levels + 1, 0);
-	totalVolume.clear();
-	totalVolume.resize(levels + 1, 0);
-	maxY = 0.0f;
-	minX = 0.0f;
-	maxX = 0.0f;
-	density = cv::Mat_<int>::zeros(20, 20);
+	stats.clear();
+	stats.totalLength.resize(levels + 1, 0);
+	stats.totalVolume.resize(levels + 1, 0);
+	stats.density = cv::Mat_<int>::zeros(20, 20);
+	stats.curvature = cv::Mat_<int>::zeros(20, 20);
 	
 	glm::mat4 modelMat;
 	generateStem(0, modelMat, radius0, length0);
@@ -72,7 +80,7 @@ bool PMTree2D::generate() {
 	}
 	*/
 	
-	if (2 * (totalLength[0] + totalLength[1]) > totalLength[2]) {
+	if (2 * (stats.totalLength[0] + stats.totalLength[1]) > stats.totalLength[2]) {
 		//cout << "too few leaves!" << endl;
 		return false;
 	}
@@ -90,22 +98,57 @@ bool PMTree2D::generate() {
 	// ToDo
 	// conflictチェック！
 
-
-	// 密度のヒストグラムを計算する
-	histogram.clear();
-	histogram.resize(10, 0);
-	for (int r = 0; r < 20; ++r) {
-		for (int c = 0; c < 20; ++c) {
-			if (density(r, c) < 10) {
-				histogram[density(r, c)]++;
-			} else {
-				histogram[9]++;
+	// curvatureを計算する
+	{
+		int cnt_curvature = 0;
+		for (int r = 0; r < 20; ++r) {
+			for (int c = 0; c < 20; ++c) {
+				if (stats.density(r, c) > 0) {
+					stats.avg_curvature += stats.curvature(r, c);
+					cnt_curvature += stats.density(r, c);
+					stats.curvature(r, c) /= (float)stats.density(r, c);
+				}
 			}
 		}
+		stats.avg_curvature /= cnt_curvature;
 	}
-	// normalize
-	for (int i = 0; i < histogram.size(); ++i) {
-		histogram[i] /= 400.0f;
+
+	// ヒストグラムを計算する
+	{
+		stats.density_histogram.resize(10, 0);
+		stats.curvature_histogram.resize(10, 0);
+		int cnt_curvature_histogram = 0;
+		for (int r = 0; r < 20; ++r) {
+			for (int c = 0; c < 20; ++c) {
+				if (stats.density(r, c) < 10) {
+					stats.density_histogram[stats.density(r, c)]++;
+				} else {
+					stats.density_histogram[9]++;
+				}
+
+				if (stats.density(r, c) > 0) {
+					int index = stats.curvature(r, c) / 10;
+					if (index < 10) {
+						stats.curvature_histogram[index]++;
+					} else {
+						stats.curvature_histogram[9]++;
+					}
+					cnt_curvature_histogram++;
+				}
+			}
+		}
+
+		// normalize
+		for (int i = 0; i < stats.density_histogram.size(); ++i) {
+			stats.density_histogram[i] /= 400.0f;
+		}
+		for (int i = 0; i < stats.curvature_histogram.size(); ++i) {
+			stats.curvature_histogram[i] /= cnt_curvature_histogram;
+		}
+	}
+
+	for (int i = 0; i < stats.curvature_histogram.size(); ++i) {
+		//cout << stats.curvature_histogram[i] << "," << endl;
 	}
 
 	return true;
@@ -168,23 +211,24 @@ void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float l
 	for (int i = 0; i < curveRes; ++i) {
 		float r1 = radius * (curveRes - i) / curveRes;
 		float r2 = radius * (curveRes - i - 1) / curveRes;
-		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(0, 160 * i / curveRes, 0));
+		float c = genRandV(curve[level] / curveRes, curveV[level] / curveRes);
+		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(0, 160 * i / curveRes, 0), c / segment_length);
 
 		modelMat = glm::translate(modelMat, glm::vec3(0, segment_length, 0));		
-		modelMat = glm::rotate(modelMat, deg2rad(genRandV(curve[level] / curveRes, curveV[level] / curveRes)), glm::vec3(0, 0, 1));
+		modelMat = glm::rotate(modelMat, deg2rad(c), glm::vec3(0, 0, 1));
 		//modelMat = rotate(modelMat, deg2rad(rot), vec3(0, 1, 0));
 	}
 }
 
-void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color) {
+void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color, float curvature) {
 	radius1 = max(radius1, 0.001f);
 	radius2 = max(radius2, 0.001f);
 
-	drawQuad(modelMat, radius2 * 2, radius1 * 2, segment_length, color);
+	drawQuad(modelMat, radius2 * 2, radius1 * 2, segment_length, color, curvature);
 
 	// 統計情報を更新
-	totalLength[level] += segment_length;
-	totalVolume[level] += segment_length * (radius1 * radius1);
+	stats.totalLength[level] += segment_length;
+	stats.totalVolume[level] += segment_length * (radius1 * radius1);
 
 	if (level >= levels) return;
 
@@ -230,7 +274,7 @@ void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float r
  * @param height		高さ
  * @param color			色
  */
-void PMTree2D::drawQuad(const glm::mat4& modelMat, float top, float base, float height, const QColor& color) {
+void PMTree2D::drawQuad(const glm::mat4& modelMat, float top, float base, float height, const QColor& color, float curvature) {
 	glm::vec4 p1(-base * 0.5, 0, 0, 1);
 	glm::vec4 p2(base * 0.5, 0, 0, 1);
 	glm::vec4 p3(top * 0.5, height, 0, 1);
@@ -251,32 +295,38 @@ void PMTree2D::drawQuad(const glm::mat4& modelMat, float top, float base, float 
 	glEnd();
 
 	// 統計情報を更新
-	maxY = max(maxY, p1.y);
-	maxY = max(maxY, p2.y);
-	maxY = max(maxY, p3.y);
-	maxY = max(maxY, p4.y);
-	minX = min(minX, p1.x);
-	minX = min(minX, p2.x);
-	minX = min(minX, p3.x);
-	minX = min(minX, p4.x);
-	maxX = max(maxX, p1.x);
-	maxX = max(maxX, p2.x);
-	maxX = max(maxX, p3.x);
-	maxX = max(maxX, p4.x);
-	cv::Mat_<int> dDensity = cv::Mat_<int>::zeros(20, 20);
-	int stacks = height / 0.25;
-	float h = height / (float)stacks;
-	for (int i = 0; i < stacks; ++i) {
-		float y = i * h;
-		glm::vec4 p(0, y, 0, 1);
-		p = modelMat * p;
-		int u = floor((p.x + 5) / 0.5);
-		int v = floor(p.y / 0.5);
-		if (u >= 0 && u < 20 && v >= 0 && v < 20) {
-			dDensity(v, u) = 1;
+	{
+		stats.maxY = max(stats.maxY, p1.y);
+		stats.maxY = max(stats.maxY, p2.y);
+		stats.maxY = max(stats.maxY, p3.y);
+		stats.maxY = max(stats.maxY, p4.y);
+		stats.minX = min(stats.minX, p1.x);
+		stats.minX = min(stats.minX, p2.x);
+		stats.minX = min(stats.minX, p3.x);
+		stats.minX = min(stats.minX, p4.x);
+		stats.maxX = max(stats.maxX, p1.x);
+		stats.maxX = max(stats.maxX, p2.x);
+		stats.maxX = max(stats.maxX, p3.x);
+		stats.maxX = max(stats.maxX, p4.x);
+
+		cv::Mat_<int> dDensity = cv::Mat_<int>::zeros(20, 20);
+		cv::Mat_<float> dCurvature = cv::Mat_<float>::zeros(20, 20);
+		int stacks = height / 0.25;
+		float h = height / (float)stacks;
+		for (int i = 0; i < stacks; ++i) {
+			float y = i * h;
+			glm::vec4 p(0, y, 0, 1);
+			p = modelMat * p;
+			int u = floor((p.x + 5) / 0.5);
+			int v = floor(p.y / 0.5);
+			if (u >= 0 && u < 20 && v >= 0 && v < 20) {
+				dDensity(v, u) = 1;
+				dCurvature(v, u) = fabs(curvature);
+			}
 		}
+		stats.density += dDensity;
+		stats.curvature += dCurvature;
 	}
-	density += dDensity;
 }
 
 /**

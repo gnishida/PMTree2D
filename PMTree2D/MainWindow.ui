@@ -39,6 +39,8 @@
     <addaction name="actionGenerateSamples"/>
     <addaction name="actionInversePMByLinearRegression"/>
     <addaction name="actionInversePMByLinearRegression2"/>
+    <addaction name="actionInversePMByLinearRegression3"/>
+    <addaction name="actionInversePMByLinearRegression4"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGenerate_Samples"/>
@@ -80,6 +82,16 @@
   <action name="actionInversePMByLinearRegression2">
    <property name="text">
     <string>Inverse PM By Linear Regression2</string>
+   </property>
+  </action>
+  <action name="actionInversePMByLinearRegression3">
+   <property name="text">
+    <string>Inverse PM By Linear Regression3</string>
+   </property>
+  </action>
+  <action name="actionInversePMByLinearRegression4">
+   <property name="text">
+    <string>Inverse PM By Linear Regression4</string>
    </property>
   </action>
  </widget>

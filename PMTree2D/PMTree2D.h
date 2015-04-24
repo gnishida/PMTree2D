@@ -10,6 +10,22 @@
 
 using namespace std;
 
+class PMTree2DStats {
+public:
+	vector<float> totalLength;
+	vector<float> totalVolume;
+	float maxY;
+	float minX, maxX;
+	float avg_curvature;
+	cv::Mat_<int> density;
+	cv::Mat_<float> curvature;
+	vector<float> density_histogram;
+	vector<float> curvature_histogram;
+
+public:
+	void clear();
+};
+
 class PMTree2D {
 public:
 	int curveRes;
@@ -23,12 +39,7 @@ public:
 
 	QColor colorStem;
 
-	vector<float> totalLength;
-	vector<float> totalVolume;
-	float maxY;
-	float minX, maxX;
-	cv::Mat_<int> density;
-	vector<float> histogram;
+	PMTree2DStats stats;
 	
 public:
 	PMTree2D();
@@ -39,8 +50,8 @@ public:
 
 private:
 	void generateStem(int level, glm::mat4 modelMat, float radius, float length);
-	void generateSegment(int level, int index, glm::mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color);
-	void drawQuad(const glm::mat4& modelMat, float top, float base, float height, const QColor& color);
+	void generateSegment(int level, int index, glm::mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color, float curvature);
+	void drawQuad(const glm::mat4& modelMat, float top, float base, float height, const QColor& color, float curvature);
 
 	float genRand();
 	float genRand(float a, float b);
