@@ -23,6 +23,7 @@ public slots:
 	void onSaveImage();
 	void onGenerateRandom();
 	void onGenerateSamples();
+	void onInversePMByLinearRegression();
 };
 
 #endif // MAINWINDOW_H

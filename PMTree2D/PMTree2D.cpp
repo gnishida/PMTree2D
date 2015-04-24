@@ -132,6 +132,35 @@ void PMTree2D::randomInit() {
 	ratio[2] = genRand(0.3, 0.7);
 }
 
+/**
+ * 指定された行列に格納されたパラメータ値をセットする。
+ *
+ * @param mat		パラメータ値が格納された行列
+ */
+void PMTree2D::setParam(const cv::Mat_<float>& mat) {
+	cv::Mat_<float> m;
+	if (mat.rows == 1) {
+		m = mat.t();
+	} else {
+		m = mat.clone();
+	}
+
+	base[0] = m(0, 0);
+	curve[0] = m(1, 0);
+	curveV[0] = m(2, 0);
+	base[1] = m(3, 0);
+	curve[1] = m(4, 0);
+	curveV[1] = m(5, 0);
+	branches[1] = m(6, 0);
+	downAngle[1] = m(7, 0);
+	ratio[1] = m(8, 0);
+	curve[2] = m(9, 0);
+	curveV[2] = m(10, 0);
+	branches[2] = m(11, 0);
+	downAngle[2] = m(12, 0);
+	ratio[2] = m(13, 0);
+}
+
 void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float length) {
 	float segment_length = length / curveRes;
 

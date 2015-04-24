@@ -35,6 +35,7 @@ public:
 
 	bool generate();
 	void randomInit();
+	void setParam(const cv::Mat_<float>& mat);
 
 private:
 	void generateStem(int level, glm::mat4 modelMat, float radius, float length);
