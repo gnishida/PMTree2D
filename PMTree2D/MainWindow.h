@@ -26,6 +26,7 @@ public slots:
 	void onInversePMByLinearRegression();
 	void onInversePMByLinearRegression2();
 	void onInversePMByLinearRegression3();
+	void onInversePMByHierarchicalLR();
 };
 
 #endif // MAINWINDOW_H
