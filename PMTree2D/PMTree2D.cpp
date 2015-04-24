@@ -115,23 +115,23 @@ bool PMTree2D::generate() {
 
 	// ヒストグラムを計算する
 	{
-		stats.density_histogram.resize(10, 0);
-		stats.curvature_histogram.resize(10, 0);
+		stats.density_histogram.resize(8, 0);
+		stats.curvature_histogram.resize(5, 0);
 		int cnt_curvature_histogram = 0;
 		for (int r = 0; r < 20; ++r) {
 			for (int c = 0; c < 20; ++c) {
-				if (stats.density(r, c) < 10) {
+				if (stats.density(r, c) < stats.density_histogram.size()) {
 					stats.density_histogram[stats.density(r, c)]++;
 				} else {
-					stats.density_histogram[9]++;
+					stats.density_histogram.back()++;
 				}
 
 				if (stats.density(r, c) > 0) {
 					int index = stats.curvature(r, c) / 10;
-					if (index < 10) {
+					if (index < stats.curvature_histogram.size()) {
 						stats.curvature_histogram[index]++;
 					} else {
-						stats.curvature_histogram[9]++;
+						stats.curvature_histogram.back()++;
 					}
 					cnt_curvature_histogram++;
 				}

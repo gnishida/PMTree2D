@@ -40,7 +40,6 @@
     <addaction name="actionInversePMByLinearRegression"/>
     <addaction name="actionInversePMByLinearRegression2"/>
     <addaction name="actionInversePMByLinearRegression3"/>
-    <addaction name="actionInversePMByLinearRegression4"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGenerate_Samples"/>
