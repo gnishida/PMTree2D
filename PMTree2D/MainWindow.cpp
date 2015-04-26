@@ -3,6 +3,7 @@
 #include <QDate>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include "DataPartition.h"
 
 MainWindow::MainWindow(QWidget *parent, Qt::WFlags flags) : QMainWindow(parent, flags) {
 	ui.setupUi(this);
@@ -435,7 +436,7 @@ void MainWindow::onInversePMByLinearRegression3() {
 }
 
 void MainWindow::onInversePMByHierarchicalLR() {
-	const int N = 20;//2000;
+	const int N = 2000;
 
 	if (!QDir("samples").exists()) QDir().mkdir("samples");
 
@@ -514,52 +515,48 @@ void MainWindow::onInversePMByHierarchicalLR() {
 		dataY2(r, dataY2.cols - 1) = 1;
 	}
 
+	cv::Mat samplesX, samplesY;
+	dataX2.convertTo(samplesX, CV_32F);
+	dataY2.convertTo(samplesY, CV_32F);
+	vector<cv::Mat_<float> > clusterX, clusterY;
+	DataPartition::partition(samplesX, samplesY, 16, clusterX, clusterY);
 
+	int count = 0;
+	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, N);
+	for (int clu = 0; clu < clusterX.size(); ++clu) {
+		cv::Mat_<double> dataX3;
+		clusterX[clu].convertTo(dataX3, CV_64F);
+		cv::Mat_<double> dataY3;
+		clusterY[clu].convertTo(dataY3, CV_64F);
 
+		// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
+		cv::Mat_<double> W = dataY3.inv(cv::DECOMP_SVD) * dataX3;
 
-	// サンプル数が32未満になるまで、繰り返し、dataX2、dataY2を分割する。
-	{
-		cv::Mat samples;
-		dataY2.convertTo(samples, CV_32F);
-		cv::Mat centroids;
-		cv::Mat labels;
-		//cv::TermCriteria cri(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 50, FLT_EPSILON);
-		cv::TermCriteria cri(cv::TermCriteria::COUNT, 200, FLT_EPSILON);
-		double compactness = cv::kmeans(samples, 2, labels, cri, 200, cv::KMEANS_PP_CENTERS, centroids);
-		
-		int nClass1 = cv::countNonZero(labels);
-		int nClass0 = N - nClass1;
-	}
+		// reverseで木を生成する
+		//cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX3.cols);
+		for (int iter = 0; iter < dataX3.rows; ++iter) {
+			cv::Mat x3_hat = dataY3.row(iter) * W;
+			cv::Mat x_hat = x3_hat.mul(maxX) + muX;
+			error += (dataX3.row(iter) - x3_hat).mul(dataX3.row(iter) - x3_hat);
+			//error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
 
-
-
-	// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
-	cv::Mat_<double> W = dataY2.inv(cv::DECOMP_SVD) * dataX2;
-
-	// reverseで木を生成する
-	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
-	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
-	for (int iter = 0; iter < N; ++iter) {
-		cv::Mat normalized_x_hat = dataY2.row(iter) * W;
-		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
-		error += (dataX2.row(iter) - normalized_x_hat).mul(dataX2.row(iter) - normalized_x_hat);
-		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
-
-		if ((iter + 1) % 100 == 0) {
-			glWidget->tree->setParam(x_hat);
-			glWidget->updateGL();
-			QString fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
+			if ((iter + 1) % 100 == 0) {
+				glWidget->tree->setParam(x_hat);
+				glWidget->updateGL();
+				QString fileName = "samples/reversed_" + QString::number(count++) + ".png";
+				glWidget->grabFrameBuffer().save(fileName);
+			}
 		}
+
 	}
 
 	error /= N;
-	error2 /= N;
+	//error2 /= N;
 	cv::sqrt(error, error);
-	cv::sqrt(error2, error2);
+	//cv::sqrt(error2, error2);
 
 	cout << "Prediction error (normalized):" << endl;
 	cout << error << endl;
-	cout << "Prediction error:" << endl;
-	cout << error2 << endl;
+	//cout << "Prediction error:" << endl;
+	//cout << error2 << endl;
 }

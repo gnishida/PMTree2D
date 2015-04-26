@@ -65,6 +65,9 @@
     <ClCompile Include="GeneratedFiles\Release\moc_ControlWidget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="DataPartition.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="MainWindow.h">
@@ -98,6 +101,9 @@
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_ControlWidget.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DataPartition.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
