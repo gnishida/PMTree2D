@@ -519,7 +519,7 @@ void MainWindow::onInversePMByHierarchicalLR() {
 	dataX2.convertTo(samplesX, CV_32F);
 	dataY2.convertTo(samplesY, CV_32F);
 	vector<cv::Mat_<float> > clusterX, clusterY;
-	DataPartition::partition(samplesX, samplesY, 16, clusterX, clusterY);
+	DataPartition::partition(samplesX, samplesY, 30, clusterX, clusterY);
 
 	int count = 0;
 	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, N);

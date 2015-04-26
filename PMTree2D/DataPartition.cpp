@@ -21,8 +21,6 @@ void DataPartition::partition(cv::Mat_<float> X, cv::Mat_<float> Y, int minSize,
 	cv::TermCriteria cri(cv::TermCriteria::COUNT, 200, FLT_EPSILON);
 	double compactness = cv::kmeans(samples, 2, labels, cri, 200, cv::KMEANS_PP_CENTERS, centroids);
 		
-	std::cout << labels << std::endl;
-
 	int nClass1 = cv::countNonZero(labels);
 	int nClass0 = X.rows - nClass1;
 
@@ -36,8 +34,6 @@ void DataPartition::partition(cv::Mat_<float> X, cv::Mat_<float> Y, int minSize,
 	cv::Mat_<float> classX1(nClass1, X.cols);
 	cv::Mat_<float> classY0(nClass0, Y.cols);
 	cv::Mat_<float> classY1(nClass1, Y.cols);
-
-	cout << X << endl;
 
 	int index0 = 0;
 	int index1 = 0;
@@ -62,10 +58,6 @@ void DataPartition::partition(cv::Mat_<float> X, cv::Mat_<float> Y, int minSize,
 			index1++;
 		}
 	}
-
-
-	cout << classX0 << endl;
-	cout << classX1 << endl;
 
 	vector<cv::Mat_<float> > clusterX0, clusterX1;
 	vector<cv::Mat_<float> > clusterY0, clusterY1;
