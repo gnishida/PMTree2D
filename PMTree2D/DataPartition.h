@@ -6,10 +6,10 @@
 using namespace std;
 
 class DataPartition {
-public:
-	DataPartition(void);
-	~DataPartition(void);
+protected:
+	DataPartition() {}
 
-	static void partition(cv::Mat_<float> X, cv::Mat_<float> Y, int minSize, vector<cv::Mat_<float> >&clusterX, vector<cv::Mat_<float> >&clusterY);
+public:
+	static void partition(cv::Mat_<float> X, cv::Mat_<float> Y, cv::Mat_<float> Z, vector<int> indices, int minSize, vector<cv::Mat_<float> >&clusterX, vector<cv::Mat_<float> >&clusterY, vector<cv::Mat_<float> >&clusterZ, vector<vector<int> >& clusterIndices);
 };
 

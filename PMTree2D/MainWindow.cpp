@@ -452,12 +452,6 @@ void MainWindow::onInversePMByHierarchicalLR() {
 			if (glWidget->tree->generate()) break;
 		}
 
-		if ((iter + 1) % 100 == 0) {
-			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
-		}
-
 		dataX(iter, 0) = glWidget->tree->base[0];
 		dataX(iter, 1) = glWidget->tree->curve[0];
 		dataX(iter, 2) = glWidget->tree->curveV[0];
@@ -515,39 +509,50 @@ void MainWindow::onInversePMByHierarchicalLR() {
 		dataY2(r, dataY2.cols - 1) = 1;
 	}
 
-	cv::Mat samplesX, samplesY;
-	dataX2.convertTo(samplesX, CV_32F);
-	dataY2.convertTo(samplesY, CV_32F);
-	vector<cv::Mat_<float> > clusterX, clusterY;
-	DataPartition::partition(samplesX, samplesY, 30, clusterX, clusterY);
+	vector<cv::Mat_<float> > clusterX, clusterX2, clusterY2;
+	vector<vector<int> > clusterIndices;
+	{
+		cv::Mat samplesX, samplesX2, samplesY2;
+		dataX.convertTo(samplesX, CV_32F);
+		dataX2.convertTo(samplesX2, CV_32F);
+		dataY2.convertTo(samplesY2, CV_32F);
+		vector<int> indices(N);
+		for (int i = 0; i < N; ++i) indices[i] = i;
+		DataPartition::partition(samplesX2, samplesY2, samplesX, indices, 100, clusterX2, clusterY2, clusterX, clusterIndices);
+	}
 
-	int count = 0;
-	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, N);
+	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX2.cols);
 	for (int clu = 0; clu < clusterX.size(); ++clu) {
-		cv::Mat_<double> dataX3;
-		clusterX[clu].convertTo(dataX3, CV_64F);
-		cv::Mat_<double> dataY3;
-		clusterY[clu].convertTo(dataY3, CV_64F);
+		cv::Mat_<double> dataX;
+		clusterX[clu].convertTo(dataX, CV_64F);
+		cv::Mat_<double> dataX2;
+		clusterX2[clu].convertTo(dataX2, CV_64F);
+		cv::Mat_<double> dataY2;
+		clusterY2[clu].convertTo(dataY2, CV_64F);
 
 		// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
-		cv::Mat_<double> W = dataY3.inv(cv::DECOMP_SVD) * dataX3;
+		cv::Mat_<double> W = dataY2.inv(cv::DECOMP_SVD) * dataX2;
 
 		// reverseで木を生成する
 		//cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX3.cols);
-		for (int iter = 0; iter < dataX3.rows; ++iter) {
-			cv::Mat x3_hat = dataY3.row(iter) * W;
-			cv::Mat x_hat = x3_hat.mul(maxX) + muX;
-			error += (dataX3.row(iter) - x3_hat).mul(dataX3.row(iter) - x3_hat);
+		for (int iter = 0; iter < dataX2.rows; ++iter) {
+			cv::Mat x2_hat = dataY2.row(iter) * W;
+			cv::Mat x_hat = x2_hat.mul(maxX) + muX;
+			error += (dataX2.row(iter) - x2_hat).mul(dataX2.row(iter) - x2_hat);
 			//error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
 
-			if ((iter + 1) % 100 == 0) {
+			if ((clusterIndices[clu][iter] + 1) % 100 == 0) {
+				glWidget->tree->setParam(dataX.row(iter));
+				glWidget->updateGL();
+				QString fileName = "samples/" + QString::number(clusterIndices[clu][iter] / 100) + ".png";
+				glWidget->grabFrameBuffer().save(fileName);
+
 				glWidget->tree->setParam(x_hat);
 				glWidget->updateGL();
-				QString fileName = "samples/reversed_" + QString::number(count++) + ".png";
+				fileName = "samples/reversed_" + QString::number(clusterIndices[clu][iter] / 100) + ".png";
 				glWidget->grabFrameBuffer().save(fileName);
 			}
 		}
-
 	}
 
 	error /= N;
