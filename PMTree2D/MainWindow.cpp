@@ -522,6 +522,7 @@ void MainWindow::onInversePMByHierarchicalLR() {
 	}
 
 	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX2.cols);
+	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX2.cols);
 	for (int clu = 0; clu < clusterX.size(); ++clu) {
 		cv::Mat_<double> dataX;
 		clusterX[clu].convertTo(dataX, CV_64F);
@@ -534,12 +535,11 @@ void MainWindow::onInversePMByHierarchicalLR() {
 		cv::Mat_<double> W = dataY2.inv(cv::DECOMP_SVD) * dataX2;
 
 		// reverseで木を生成する
-		//cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX3.cols);
 		for (int iter = 0; iter < dataX2.rows; ++iter) {
 			cv::Mat x2_hat = dataY2.row(iter) * W;
 			cv::Mat x_hat = x2_hat.mul(maxX) + muX;
 			error += (dataX2.row(iter) - x2_hat).mul(dataX2.row(iter) - x2_hat);
-			//error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
+			error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
 
 			if ((clusterIndices[clu][iter] + 1) % 100 == 0) {
 				glWidget->tree->setParam(dataX.row(iter));
@@ -556,12 +556,12 @@ void MainWindow::onInversePMByHierarchicalLR() {
 	}
 
 	error /= N;
-	//error2 /= N;
+	error2 /= N;
 	cv::sqrt(error, error);
-	//cv::sqrt(error2, error2);
+	cv::sqrt(error2, error2);
 
 	cout << "Prediction error (normalized):" << endl;
 	cout << error << endl;
-	//cout << "Prediction error:" << endl;
-	//cout << error2 << endl;
+	cout << "Prediction error:" << endl;
+	cout << error2 << endl;
 }
