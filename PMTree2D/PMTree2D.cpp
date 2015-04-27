@@ -54,7 +54,10 @@ PMTree2D::PMTree2D() {
  * @return		true - 物理的にOK / false - 物理的にNG
  */
 bool PMTree2D::generate() {
-	srand(0);
+	vector<unsigned> seeds(1);
+	seeds[0] = 0;
+	std::seed_seq seq(seeds.begin(), seeds.end());
+	mt.seed(seq);
 
 	float radius0 = 0.15;
 	float length0 = 10.0;
@@ -154,8 +157,11 @@ bool PMTree2D::generate() {
 	return true;
 }
 
-void PMTree2D::randomInit() {
-	//srand((unsigned int)time(NULL));
+void PMTree2D::randomInit(int seed) {
+	vector<unsigned> seeds(1);
+	seeds[0] = seed;
+	std::seed_seq seq(seeds.begin(), seeds.end());
+	mt.seed(seq);
 
 	base[0] = genRand(0, 0.5);
 	curve[0] = genRand(-30, 30);
@@ -180,7 +186,7 @@ void PMTree2D::randomInit() {
  *
  * @param mat		パラメータ値が格納された行列
  */
-void PMTree2D::setParam(const cv::Mat_<float>& mat) {
+void PMTree2D::setParams(const cv::Mat_<float>& mat) {
 	cv::Mat_<float> m;
 	if (mat.rows == 1) {
 		m = mat.t();
@@ -333,18 +339,21 @@ void PMTree2D::drawQuad(const glm::mat4& modelMat, float top, float base, float 
  * Uniform乱数[0, 1)を生成する
  */
 float PMTree2D::genRand() {
-	return rand() / (float(RAND_MAX) + 1);
+	std::uniform_real_distribution<> r(0.0, 1.0); 
+	return r(mt);
 }
 
 float PMTree2D::genRand(float a, float b) {
-	return genRand() * (b - a) + a;
+	std::uniform_real_distribution<> r(a, b); 
+	return r(mt);
 }
 
 /**
  * meanを中心とし、varianceの幅でuniformに乱数を生成する。
  */
 float PMTree2D::genRandV(float mean, float variance) {
-	return genRand() * variance * 2.0 + mean - variance;
+	std::uniform_real_distribution<> r(mean - variance, mean + variance);
+	return r(mt);
 }
 
 float PMTree2D::deg2rad(float deg) {

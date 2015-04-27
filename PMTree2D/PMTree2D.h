@@ -7,6 +7,7 @@
 #include <vector>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include <random>
 
 using namespace std;
 
@@ -39,14 +40,15 @@ public:
 
 	QColor colorStem;
 
+	std::mt19937 mt;
 	PMTree2DStats stats;
 	
 public:
 	PMTree2D();
 
 	bool generate();
-	void randomInit();
-	void setParam(const cv::Mat_<float>& mat);
+	void randomInit(int seed);
+	void setParams(const cv::Mat_<float>& mat);
 
 private:
 	void generateStem(int level, glm::mat4 modelMat, float radius, float length);

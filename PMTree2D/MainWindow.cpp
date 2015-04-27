@@ -36,7 +36,7 @@ void MainWindow::onSaveImage() {
 
 void MainWindow::onGenerateRandom() {
 	while (true) {
-		glWidget->tree->randomInit();
+		glWidget->tree->randomInit(time(0));
 		if (glWidget->tree->generate()) break;
 	}
 
@@ -49,15 +49,15 @@ void MainWindow::onGenerateSamples() {
 
 	if (!QDir("samples").exists()) QDir().mkdir("samples");
 
-	FILE* fp = fopen("samples/samples.txt", "w");
-
 	cout << "Generating samples..." << endl;
 
+	cv::Mat_<double> params(N, 14);
+	int seed_count = 0;
 	for (int iter = 0; iter < N; ++iter) {
 		cout << iter << endl;
 
 		while (true) {
-			glWidget->tree->randomInit();
+			glWidget->tree->randomInit(seed_count++);
 			if (glWidget->tree->generate()) break;
 		}
 
@@ -66,37 +66,7 @@ void MainWindow::onGenerateSamples() {
 			QString fileName = "samples/" + QString::number(iter) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 		}
-
-		fprintf(fp, "[%lf,%d,%d,%lf,%d,%d,%d,%d,%lf,%d,%d,%d,%d,%lf],[%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf]\n", 
-			glWidget->tree->base[0],
-			glWidget->tree->curve[0],
-			glWidget->tree->curveV[0],
-			glWidget->tree->base[1],
-			glWidget->tree->curve[1],
-			glWidget->tree->curveV[1],
-			glWidget->tree->branches[1],
-			glWidget->tree->downAngle[1],
-			glWidget->tree->ratio[1],
-			glWidget->tree->curve[2],
-			glWidget->tree->curveV[2],
-			glWidget->tree->branches[2],
-			glWidget->tree->downAngle[2],
-			glWidget->tree->ratio[2],
-			glWidget->tree->stats.maxY,
-			glWidget->tree->stats.maxX - glWidget->tree->stats.minX,
-			glWidget->tree->stats.density_histogram[0],
-			glWidget->tree->stats.density_histogram[1],
-			glWidget->tree->stats.density_histogram[2],
-			glWidget->tree->stats.density_histogram[3],
-			glWidget->tree->stats.density_histogram[4],
-			glWidget->tree->stats.density_histogram[5],
-			glWidget->tree->stats.density_histogram[6],
-			glWidget->tree->stats.density_histogram[7],
-			glWidget->tree->stats.density_histogram[8],
-			glWidget->tree->stats.density_histogram[9]);
 	}
-		
-	fclose(fp);
 
 	glWidget->update();
 	controlWidget->update();
@@ -117,15 +87,16 @@ void MainWindow::onInversePMByLinearRegression() {
 
 	cv::Mat_<double> dataX(N, 14);
 	cv::Mat_<double> dataY(N, 5);
+	int seed_count = 0;
 	for (int iter = 0; iter < N; ++iter) {
 		cout << iter << endl;
 
 		while (true) {
-			glWidget->tree->randomInit();
+			glWidget->tree->randomInit(seed_count++);
 			if (glWidget->tree->generate()) break;
 		}
 
-		if ((iter + 1) % 100 == 0) {
+		if (iter % 100 == 0) {
 			glWidget->updateGL();
 			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
@@ -188,8 +159,8 @@ void MainWindow::onInversePMByLinearRegression() {
 		error += (dataX2.row(iter) - normalized_x_hat).mul(dataX2.row(iter) - normalized_x_hat);
 		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
 
-		if ((iter + 1) % 100 == 0) {
-			glWidget->tree->setParam(x_hat);
+		if (iter % 100 == 0) {
+			glWidget->tree->setParams(x_hat);
 			glWidget->updateGL();
 			QString fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
@@ -222,15 +193,16 @@ void MainWindow::onInversePMByLinearRegression2() {
 
 	cv::Mat_<double> dataX(N, 14);
 	cv::Mat_<double> dataY(N, 12);
+	int seed_count = 0;
 	for (int iter = 0; iter < N; ++iter) {
 		cout << iter << endl;
 
 		while (true) {
-			glWidget->tree->randomInit();
+			glWidget->tree->randomInit(seed_count++);
 			if (glWidget->tree->generate()) break;
 		}
 
-		if ((iter + 1) % 100 == 0) {
+		if (iter % 100 == 0) {
 			glWidget->updateGL();
 			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
@@ -300,8 +272,8 @@ void MainWindow::onInversePMByLinearRegression2() {
 		error += (dataX2.row(iter) - normalized_x_hat).mul(dataX2.row(iter) - normalized_x_hat);
 		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
 
-		if ((iter + 1) % 100 == 0) {
-			glWidget->tree->setParam(x_hat);
+		if (iter % 100 == 0) {
+			glWidget->tree->setParams(x_hat);
 			glWidget->updateGL();
 			QString fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
@@ -333,15 +305,16 @@ void MainWindow::onInversePMByLinearRegression3() {
 
 	cv::Mat_<double> dataX(N, 14);
 	cv::Mat_<double> dataY(N, 16);
+	int seed_count = 0;
 	for (int iter = 0; iter < N; ++iter) {
 		cout << iter << endl;
 
 		while (true) {
-			glWidget->tree->randomInit();
+			glWidget->tree->randomInit(seed_count++);
 			if (glWidget->tree->generate()) break;
 		}
 
-		if ((iter + 1) % 100 == 0) {
+		if (iter % 100 == 0) {
 			glWidget->updateGL();
 			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
@@ -416,8 +389,8 @@ void MainWindow::onInversePMByLinearRegression3() {
 		error += (dataX2.row(iter) - normalized_x_hat).mul(dataX2.row(iter) - normalized_x_hat);
 		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
 
-		if ((iter + 1) % 100 == 0) {
-			glWidget->tree->setParam(x_hat);
+		if (iter % 100 == 0) {
+			glWidget->tree->setParams(x_hat);
 			glWidget->updateGL();
 			QString fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
@@ -444,11 +417,12 @@ void MainWindow::onInversePMByHierarchicalLR() {
 
 	cv::Mat_<double> dataX(N, 14);
 	cv::Mat_<double> dataY(N, 16);
+	int seed_count = 0;
 	for (int iter = 0; iter < N; ++iter) {
 		cout << iter << endl;
 
 		while (true) {
-			glWidget->tree->randomInit();
+			glWidget->tree->randomInit(seed_count++);
 			if (glWidget->tree->generate()) break;
 		}
 
@@ -518,7 +492,11 @@ void MainWindow::onInversePMByHierarchicalLR() {
 		dataY2.convertTo(samplesY2, CV_32F);
 		vector<int> indices(N);
 		for (int i = 0; i < N; ++i) indices[i] = i;
-		DataPartition::partition(samplesX2, samplesY2, samplesX, indices, 100, clusterX2, clusterY2, clusterX, clusterIndices);
+		DataPartition::partition(samplesX2, samplesY2, samplesX, indices, 20, clusterX2, clusterY2, clusterX, clusterIndices);
+
+		for (int i = 0; i < clusterX.size(); ++i) {
+			cout << clusterX[i].rows << endl;
+		}
 	}
 
 	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX2.cols);
@@ -541,13 +519,13 @@ void MainWindow::onInversePMByHierarchicalLR() {
 			error += (dataX2.row(iter) - x2_hat).mul(dataX2.row(iter) - x2_hat);
 			error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
 
-			if ((clusterIndices[clu][iter] + 1) % 100 == 0) {
-				glWidget->tree->setParam(dataX.row(iter));
+			if (clusterIndices[clu][iter] % 100 == 0) {
+				glWidget->tree->setParams(dataX.row(iter));
 				glWidget->updateGL();
 				QString fileName = "samples/" + QString::number(clusterIndices[clu][iter] / 100) + ".png";
 				glWidget->grabFrameBuffer().save(fileName);
 
-				glWidget->tree->setParam(x_hat);
+				glWidget->tree->setParams(x_hat);
 				glWidget->updateGL();
 				fileName = "samples/reversed_" + QString::number(clusterIndices[clu][iter] / 100) + ".png";
 				glWidget->grabFrameBuffer().save(fileName);
