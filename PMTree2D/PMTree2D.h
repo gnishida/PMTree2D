@@ -50,9 +50,7 @@ public:
 	void randomInit(int seed);
 	void setParams(const cv::Mat_<float>& mat);
 	vector<float> getParams();
-	vector<float> getStatistics1();
-	vector<float> getStatistics2();
-	vector<float> getStatistics3();
+	vector<float> getStatistics(int type);
 
 private:
 	void generateStem(int level, glm::mat4 modelMat, float radius, float length);
