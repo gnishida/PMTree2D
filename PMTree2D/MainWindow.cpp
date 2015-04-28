@@ -3,6 +3,7 @@
 #include <QDate>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include <fstream>
 #include "DataPartition.h"
 
 MainWindow::MainWindow(QWidget *parent, Qt::WFlags flags) : QMainWindow(parent, flags) {
@@ -12,6 +13,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WFlags flags) : QMainWindow(parent, 
 	connect(ui.actionSaveImage, SIGNAL(triggered()), this, SLOT(onSaveImage()));
 	connect(ui.actionGenerateRandom, SIGNAL(triggered()), this, SLOT(onGenerateRandom()));
 	connect(ui.actionGenerateSamples, SIGNAL(triggered()), this, SLOT(onGenerateSamples()));
+	connect(ui.actionGenerateTrainingFiles, SIGNAL(triggered()), this, SLOT(onGenerateTrainingFiles()));
 	connect(ui.actionInversePMByLinearRegression, SIGNAL(triggered()), this, SLOT(onInversePMByLinearRegression()));
 	connect(ui.actionInversePMByLinearRegression2, SIGNAL(triggered()), this, SLOT(onInversePMByLinearRegression2()));
 	connect(ui.actionInversePMByLinearRegression3, SIGNAL(triggered()), this, SLOT(onInversePMByLinearRegression3()));
@@ -51,6 +53,8 @@ void MainWindow::onGenerateSamples() {
 
 	cout << "Generating samples..." << endl;
 
+	ofstream ofs("samples/samples.txt");
+
 	cv::Mat_<double> params(N, 14);
 	int seed_count = 0;
 	for (int iter = 0; iter < N; ++iter) {
@@ -61,12 +65,72 @@ void MainWindow::onGenerateSamples() {
 			if (glWidget->tree->generate()) break;
 		}
 
-		if ((iter + 1) % 100 == 0) {
+		if (iter % 100 == 0) {
 			glWidget->updateGL();
 			QString fileName = "samples/" + QString::number(iter) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 		}
+
+		vector<float> params = glWidget->tree->getParams();
+		for (int i = 0; i < params.size(); ++i) {
+			if (i > 0) {
+				ofs << ",";
+			}
+			ofs << params[i];
+		}
+		ofs << endl;
 	}
+	ofs.close();
+
+	glWidget->update();
+	controlWidget->update();
+}
+
+void MainWindow::onGenerateTrainingFiles() {
+	const int N = 2000;
+
+	if (!QDir("samples").exists()) QDir().mkdir("samples");
+
+	cout << "Generating samples..." << endl;
+
+	ofstream ofs("samples/samples.txt");
+
+	cv::Mat_<double> params(N, 14);
+	int seed_count = 0;
+	for (int iter = 0; iter < N; ++iter) {
+		cout << iter << endl;
+
+		while (true) {
+			glWidget->tree->randomInit(seed_count++);
+			if (glWidget->tree->generate()) break;
+		}
+
+		if (iter % 100 == 0) {
+			glWidget->updateGL();
+			QString fileName = "samples/" + QString::number(iter) + ".png";
+			glWidget->grabFrameBuffer().save(fileName);
+		}
+
+		vector<float> params = glWidget->tree->getParams();
+		ofs << "[";
+		for (int i = 0; i < params.size(); ++i) {
+			if (i > 0) {
+				ofs << ",";
+			}
+			ofs << params[i];
+		}
+		ofs << "],[";
+
+		vector<float> statistics = glWidget->tree->getStatistics3();
+		for (int i = 0; i < statistics.size(); ++i) {
+			if (i > 0) {
+				ofs << ",";
+			}
+			ofs << statistics[i];
+		}
+		ofs << "]" << endl;
+	}
+	ofs.close();
 
 	glWidget->update();
 	controlWidget->update();
@@ -102,26 +166,16 @@ void MainWindow::onInversePMByLinearRegression() {
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 
-		dataX(iter, 0) = glWidget->tree->base[0];
-		dataX(iter, 1) = glWidget->tree->curve[0];
-		dataX(iter, 2) = glWidget->tree->curveV[0];
-		dataX(iter, 3) = glWidget->tree->base[1];
-		dataX(iter, 4) = glWidget->tree->curve[1];
-		dataX(iter, 5) = glWidget->tree->curveV[1];
-		dataX(iter, 6) = glWidget->tree->branches[1];
-		dataX(iter, 7) = glWidget->tree->downAngle[1];
-		dataX(iter, 8) = glWidget->tree->ratio[1];
-		dataX(iter, 9) = glWidget->tree->curve[2];
-		dataX(iter, 10) = glWidget->tree->curveV[2];
-		dataX(iter, 11) = glWidget->tree->branches[2];
-		dataX(iter, 12) = glWidget->tree->downAngle[2];
-		dataX(iter, 13) = glWidget->tree->ratio[2];
+		vector<float> params = glWidget->tree->getParams();
+		for (int col = 0; col < dataX.cols; ++col) {
+			dataX(iter, col) = params[col];
+		}
 
-		dataY(iter, 0) = glWidget->tree->stats.maxY;
-		dataY(iter, 1) = glWidget->tree->stats.maxX - glWidget->tree->stats.minX;
-		dataY(iter, 2) = 1 - glWidget->tree->stats.density_histogram[0];
-		dataY(iter, 3) = glWidget->tree->stats.avg_curvature;
-		dataY(iter, 4) = 1; // 定数項
+		vector<float> statistics = glWidget->tree->getStatistics1();
+		for (int col = 0; col < dataY.cols - 1; ++col) {
+			dataY(iter, col) = statistics[col];
+		}
+		dataY(iter, dataY.cols - 1) = 1; // 定数項
 	}
 
 	glWidget->update();
@@ -208,33 +262,16 @@ void MainWindow::onInversePMByLinearRegression2() {
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 
-		dataX(iter, 0) = glWidget->tree->base[0];
-		dataX(iter, 1) = glWidget->tree->curve[0];
-		dataX(iter, 2) = glWidget->tree->curveV[0];
-		dataX(iter, 3) = glWidget->tree->base[1];
-		dataX(iter, 4) = glWidget->tree->curve[1];
-		dataX(iter, 5) = glWidget->tree->curveV[1];
-		dataX(iter, 6) = glWidget->tree->branches[1];
-		dataX(iter, 7) = glWidget->tree->downAngle[1];
-		dataX(iter, 8) = glWidget->tree->ratio[1];
-		dataX(iter, 9) = glWidget->tree->curve[2];
-		dataX(iter, 10) = glWidget->tree->curveV[2];
-		dataX(iter, 11) = glWidget->tree->branches[2];
-		dataX(iter, 12) = glWidget->tree->downAngle[2];
-		dataX(iter, 13) = glWidget->tree->ratio[2];
+		vector<float> params = glWidget->tree->getParams();
+		for (int col = 0; col < dataX.cols; ++col) {
+			dataX(iter, col) = params[col];
+		}
 
-		dataY(iter, 0) = glWidget->tree->stats.maxY;
-		dataY(iter, 1) = glWidget->tree->stats.maxX - glWidget->tree->stats.minX;
-		dataY(iter, 2) = glWidget->tree->stats.density_histogram[0];
-		dataY(iter, 3) = glWidget->tree->stats.density_histogram[1];
-		dataY(iter, 4) = glWidget->tree->stats.density_histogram[2];
-		dataY(iter, 5) = glWidget->tree->stats.density_histogram[3];
-		dataY(iter, 6) = glWidget->tree->stats.density_histogram[4];
-		dataY(iter, 7) = glWidget->tree->stats.density_histogram[5];
-		dataY(iter, 8) = glWidget->tree->stats.density_histogram[6];
-		dataY(iter, 9) = glWidget->tree->stats.density_histogram[7];
-		dataY(iter, 10) = glWidget->tree->stats.avg_curvature;
-		dataY(iter, 11) = 1; // 定数項
+		vector<float> statistics = glWidget->tree->getStatistics2();
+		for (int col = 0; col < dataY.cols - 1; ++col) {
+			dataY(iter, col) = statistics[col];
+		}
+		dataY(iter, dataY.cols - 1) = 1; // 定数項
 	}
 
 	glWidget->update();
@@ -320,39 +357,16 @@ void MainWindow::onInversePMByLinearRegression3() {
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 
-		dataX(iter, 0) = glWidget->tree->base[0];
-		dataX(iter, 1) = glWidget->tree->curve[0];
-		dataX(iter, 2) = glWidget->tree->curveV[0];
-		dataX(iter, 3) = glWidget->tree->base[1];
-		dataX(iter, 4) = glWidget->tree->curve[1];
-		dataX(iter, 5) = glWidget->tree->curveV[1];
-		dataX(iter, 6) = glWidget->tree->branches[1];
-		dataX(iter, 7) = glWidget->tree->downAngle[1];
-		dataX(iter, 8) = glWidget->tree->ratio[1];
-		dataX(iter, 9) = glWidget->tree->curve[2];
-		dataX(iter, 10) = glWidget->tree->curveV[2];
-		dataX(iter, 11) = glWidget->tree->branches[2];
-		dataX(iter, 12) = glWidget->tree->downAngle[2];
-		dataX(iter, 13) = glWidget->tree->ratio[2];
+		vector<float> params = glWidget->tree->getParams();
+		for (int col = 0; col < dataX.cols; ++col) {
+			dataX(iter, col) = params[col];
+		}
 
-		float lambda = 1.0f;
-
-		dataY(iter, 0) = glWidget->tree->stats.maxY;
-		dataY(iter, 1) = glWidget->tree->stats.maxX - glWidget->tree->stats.minX;
-		dataY(iter, 2) = glWidget->tree->stats.density_histogram[0];
-		dataY(iter, 3) = glWidget->tree->stats.density_histogram[1];
-		dataY(iter, 4) = glWidget->tree->stats.density_histogram[2];
-		dataY(iter, 5) = glWidget->tree->stats.density_histogram[3];
-		dataY(iter, 6) = glWidget->tree->stats.density_histogram[4];
-		dataY(iter, 7) = glWidget->tree->stats.density_histogram[5];
-		dataY(iter, 8) = glWidget->tree->stats.density_histogram[6];
-		dataY(iter, 9) = glWidget->tree->stats.density_histogram[7];
-		dataY(iter, 10) = glWidget->tree->stats.curvature_histogram[0] * lambda;
-		dataY(iter, 11) = glWidget->tree->stats.curvature_histogram[1] * lambda;
-		dataY(iter, 12) = glWidget->tree->stats.curvature_histogram[2] * lambda;
-		dataY(iter, 13) = glWidget->tree->stats.curvature_histogram[3] * lambda;
-		dataY(iter, 14) = glWidget->tree->stats.curvature_histogram[4] * lambda;
-		dataY(iter, 15) = 1; // 定数項
+		vector<float> statistics = glWidget->tree->getStatistics3();
+		for (int col = 0; col < dataY.cols - 1; ++col) {
+			dataY(iter, col) = statistics[col];
+		}
+		dataY(iter, dataY.cols - 1) = 1; // 定数項
 	}
 
 	glWidget->update();
@@ -426,39 +440,16 @@ void MainWindow::onInversePMByHierarchicalLR() {
 			if (glWidget->tree->generate()) break;
 		}
 
-		dataX(iter, 0) = glWidget->tree->base[0];
-		dataX(iter, 1) = glWidget->tree->curve[0];
-		dataX(iter, 2) = glWidget->tree->curveV[0];
-		dataX(iter, 3) = glWidget->tree->base[1];
-		dataX(iter, 4) = glWidget->tree->curve[1];
-		dataX(iter, 5) = glWidget->tree->curveV[1];
-		dataX(iter, 6) = glWidget->tree->branches[1];
-		dataX(iter, 7) = glWidget->tree->downAngle[1];
-		dataX(iter, 8) = glWidget->tree->ratio[1];
-		dataX(iter, 9) = glWidget->tree->curve[2];
-		dataX(iter, 10) = glWidget->tree->curveV[2];
-		dataX(iter, 11) = glWidget->tree->branches[2];
-		dataX(iter, 12) = glWidget->tree->downAngle[2];
-		dataX(iter, 13) = glWidget->tree->ratio[2];
+		vector<float> params = glWidget->tree->getParams();
+		for (int col = 0; col < dataX.cols; ++col) {
+			dataX(iter, col) = params[col];
+		}
 
-		float lambda = 1.0f;
-
-		dataY(iter, 0) = glWidget->tree->stats.maxY;
-		dataY(iter, 1) = glWidget->tree->stats.maxX - glWidget->tree->stats.minX;
-		dataY(iter, 2) = glWidget->tree->stats.density_histogram[0];
-		dataY(iter, 3) = glWidget->tree->stats.density_histogram[1];
-		dataY(iter, 4) = glWidget->tree->stats.density_histogram[2];
-		dataY(iter, 5) = glWidget->tree->stats.density_histogram[3];
-		dataY(iter, 6) = glWidget->tree->stats.density_histogram[4];
-		dataY(iter, 7) = glWidget->tree->stats.density_histogram[5];
-		dataY(iter, 8) = glWidget->tree->stats.density_histogram[6];
-		dataY(iter, 9) = glWidget->tree->stats.density_histogram[7];
-		dataY(iter, 10) = glWidget->tree->stats.curvature_histogram[0] * lambda;
-		dataY(iter, 11) = glWidget->tree->stats.curvature_histogram[1] * lambda;
-		dataY(iter, 12) = glWidget->tree->stats.curvature_histogram[2] * lambda;
-		dataY(iter, 13) = glWidget->tree->stats.curvature_histogram[3] * lambda;
-		dataY(iter, 14) = glWidget->tree->stats.curvature_histogram[4] * lambda;
-		dataY(iter, 15) = 1; // 定数項
+		vector<float> statistics = glWidget->tree->getStatistics3();
+		for (int col = 0; col < dataY.cols - 1; ++col) {
+			dataY(iter, col) = statistics[col];
+		}
+		dataY(iter, dataY.cols - 1) = 1; // 定数項
 	}
 
 	glWidget->update();

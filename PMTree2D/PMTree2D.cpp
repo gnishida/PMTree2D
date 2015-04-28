@@ -210,6 +210,73 @@ void PMTree2D::setParams(const cv::Mat_<float>& mat) {
 	ratio[2] = m(13, 0);
 }
 
+vector<float> PMTree2D::getParams() {
+	vector<float> ret(14);
+	ret[0] = base[0];
+	ret[1] = curve[0];
+	ret[2] = curveV[0];
+	ret[3] = base[1];
+	ret[4] = curve[1];
+	ret[5] = curveV[1];
+	ret[6] = branches[1];
+	ret[7] = downAngle[1];
+	ret[8] = ratio[1];
+	ret[9] = curve[2];
+	ret[10] = curveV[2];
+	ret[11] = branches[2];
+	ret[12] = downAngle[2];
+	ret[13] = ratio[2];
+
+	return ret;
+}
+
+vector<float> PMTree2D::getStatistics1() {
+	vector<float> ret(3);
+	ret[0] = stats.maxY;
+	ret[1] = stats.maxX - stats.minX;
+	ret[2] = 1 - stats.density_histogram[0];
+
+	return ret;
+}
+
+vector<float> PMTree2D::getStatistics2() {
+	vector<float> ret(11);
+	ret[0] = stats.maxY;
+	ret[1] = stats.maxX - stats.minX;
+	ret[2] = stats.density_histogram[0];
+	ret[3] = stats.density_histogram[1];
+	ret[4] = stats.density_histogram[2];
+	ret[5] = stats.density_histogram[3];
+	ret[6] = stats.density_histogram[4];
+	ret[7] = stats.density_histogram[5];
+	ret[8] = stats.density_histogram[6];
+	ret[9] = stats.density_histogram[7];
+	ret[10] = stats.avg_curvature;
+
+	return ret;
+}
+
+vector<float> PMTree2D::getStatistics3() {
+	vector<float> ret(15);
+	ret[0] = stats.maxY;
+	ret[1] = stats.maxX - stats.minX;
+	ret[2] = stats.density_histogram[0];
+	ret[3] = stats.density_histogram[1];
+	ret[4] = stats.density_histogram[2];
+	ret[5] = stats.density_histogram[3];
+	ret[6] = stats.density_histogram[4];
+	ret[7] = stats.density_histogram[5];
+	ret[8] = stats.density_histogram[6];
+	ret[9] = stats.density_histogram[7];
+	ret[10] = stats.curvature_histogram[0];
+	ret[11] = stats.curvature_histogram[1];
+	ret[12] = stats.curvature_histogram[2];
+	ret[13] = stats.curvature_histogram[3];
+	ret[14] = stats.curvature_histogram[4];
+
+	return ret;
+}
+
 void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float length) {
 	float segment_length = length / curveRes;
 

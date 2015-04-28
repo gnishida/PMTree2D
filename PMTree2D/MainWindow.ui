@@ -37,6 +37,7 @@
     </property>
     <addaction name="actionGenerateRandom"/>
     <addaction name="actionGenerateSamples"/>
+    <addaction name="actionGenerateTrainingFiles"/>
     <addaction name="separator"/>
     <addaction name="actionInversePMByLinearRegression"/>
     <addaction name="actionInversePMByLinearRegression2"/>
@@ -99,6 +100,11 @@
   <action name="actionInversePMByHierarchicalLR">
    <property name="text">
     <string>Inverse PM By Hierarchical LR</string>
+   </property>
+  </action>
+  <action name="actionGenerateTrainingFiles">
+   <property name="text">
+    <string>Generate Training Files</string>
    </property>
   </action>
  </widget>

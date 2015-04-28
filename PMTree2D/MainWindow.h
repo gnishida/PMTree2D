@@ -23,6 +23,7 @@ public slots:
 	void onSaveImage();
 	void onGenerateRandom();
 	void onGenerateSamples();
+	void onGenerateTrainingFiles();
 	void onInversePMByLinearRegression();
 	void onInversePMByLinearRegression2();
 	void onInversePMByLinearRegression3();
