@@ -208,6 +208,24 @@ void PMTree2D::setParams(const cv::Mat_<float>& mat) {
 	branches[2] = m(11, 0);
 	downAngle[2] = m(12, 0);
 	ratio[2] = m(13, 0);
+
+	// hard constraints
+	base[0] = glm::clamp(base[0], 0.0f, 0.5f);
+	curve[0] = glm::clamp(curve[0], -30, 30);
+	curveV[0] = glm::clamp(curveV[0], 0, 100);
+
+	base[1] = glm::clamp(base[0], 0.0f, 0.5f);
+	curve[1] = glm::clamp(curve[0], -110, 110);
+	curveV[1] = glm::clamp(curveV[0], 0, 100);
+	branches[1] = glm::clamp(branches[1], 10, 40);
+	downAngle[1] = glm::clamp(downAngle[1], 20, 70);
+	ratio[1] = glm::clamp(ratio[1], 0.3f, 0.7f);
+
+	curve[2] = glm::clamp(curve[0], -110, 110);
+	curveV[2] = glm::clamp(curveV[0], 0, 100);
+	branches[2] = glm::clamp(branches[1], 10, 40);
+	downAngle[2] = glm::clamp(downAngle[1], 10, 50);
+	ratio[2] = glm::clamp(ratio[1], 0.3f, 0.7f);
 }
 
 vector<float> PMTree2D::getParams() {

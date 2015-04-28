@@ -89,6 +89,28 @@ void MainWindow::sample(int type, int N, cv::Mat_<double>& dataX, cv::Mat_<doubl
 	}
 }
 
+/**
+ * データを、指定された比率に従い、trainingデータとtestデータに分割する。
+ *
+ */
+void MainWindow::split(const cv::Mat_<double>& data, float train_ratio, float test_ratio, cv::Mat_<double>& train_data, cv::Mat_<double>& test_data) {
+	int train_rows = data.rows * train_ratio;
+	int test_rows = data.rows - train_rows;
+
+	train_data = cv::Mat_<double>(train_rows, data.cols);
+	test_data = cv::Mat_<double>(test_rows, data.cols);
+
+	for (int r = 0; r < data.rows; ++r) {
+		for (int c = 0; c < data.cols; ++c) {
+			if (r < train_rows) {
+				train_data(r, c) = data(r, c);
+			} else {
+				test_data(r - train_rows, c) = data(r, c);
+			}
+		}
+	}
+}
+
 void MainWindow::onGenerateRandom() {
 	while (true) {
 		glWidget->tree->randomInit(time(0));
@@ -178,40 +200,45 @@ void MainWindow::onInversePMByLinearRegression() {
 
 	cv::Mat_<double> dataX(N, 14);
 	cv::Mat_<double> dataY(N, 5);
-	cv::Mat_<double> normalized_dataX;
-	cv::Mat_<double> normalized_dataY;
+	cv::Mat_<double> normalized_dataX, normalized_dataY;
 	cv::Mat_<double> muX, muY;
 	cv::Mat_<double> maxX, maxY;
+	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
+	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
 	sample(0, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
+	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
+	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
+	split(normalized_dataY, 0.9, 0.1, train_normalized_dataY, test_normalized_dataY);
 
 	// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
-	cv::Mat_<double> W = normalized_dataY.inv(cv::DECOMP_SVD) * normalized_dataX;
+	cv::Mat_<double> W = train_normalized_dataY.inv(cv::DECOMP_SVD) * train_normalized_dataX;
 
 	// reverseで木を生成する
 	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
 	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
-	for (int iter = 0; iter < N; ++iter) {
-		cv::Mat normalized_x_hat = normalized_dataY.row(iter) * W;
+	for (int iter = 0; iter < test_normalized_dataY.rows; ++iter) {
+		cv::Mat normalized_x_hat = test_normalized_dataY.row(iter) * W;
 		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
 
-		error += (normalized_dataX.row(iter) - normalized_x_hat).mul(normalized_dataX.row(iter) - normalized_x_hat);
-		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
+		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
+		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-		if (iter % 100 == 0) {
-			glWidget->tree->setParams(dataX.row(iter));
+		if (iter % 20 == 0) {
+			glWidget->tree->setParams(test_dataX.row(iter));
 			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
+			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 
 			glWidget->tree->setParams(x_hat);
 			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
+			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 	}
 
-	error /= N;
-	error2 /= N;
+	error /= test_normalized_dataY.rows;
+	error2 /= test_normalized_dataY.rows;
 	cv::sqrt(error, error);
 	cv::sqrt(error2, error2);
 
@@ -240,35 +267,41 @@ void MainWindow::onInversePMByLinearRegression2() {
 	cv::Mat_<double> normalized_dataY;
 	cv::Mat_<double> muX, muY;
 	cv::Mat_<double> maxX, maxY;
+	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
+	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
 	sample(1, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
+	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
+	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
+	split(normalized_dataY, 0.9, 0.1, train_normalized_dataY, test_normalized_dataY);
 
 	// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
-	cv::Mat_<double> W = normalized_dataY.inv(cv::DECOMP_SVD) * normalized_dataX;
+	cv::Mat_<double> W = train_normalized_dataY.inv(cv::DECOMP_SVD) * train_normalized_dataX;
 	
 	// reverseで木を生成する
 	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
 	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
-	for (int iter = 0; iter < N; ++iter) {
-		cv::Mat normalized_x_hat = normalized_dataY.row(iter) * W;
+	for (int iter = 0; iter < test_normalized_dataY.rows; ++iter) {
+		cv::Mat normalized_x_hat = test_normalized_dataY.row(iter) * W;
 		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
 
-		error += (normalized_dataX.row(iter) - normalized_x_hat).mul(normalized_dataX.row(iter) - normalized_x_hat);
-		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
+		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
+		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-		if (iter % 100 == 0) {
-			glWidget->tree->setParams(dataX.row(iter));
+		if (iter % 20 == 0) {
+			glWidget->tree->setParams(test_dataX.row(iter));
 			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
+			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 
 			glWidget->tree->setParams(x_hat);
 			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
+			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 	}
-	error /= N;
-	error2 /= N;
+	error /= test_normalized_dataY.rows;
+	error2 /= test_normalized_dataY.rows;
 	cv::sqrt(error, error);
 	cv::sqrt(error2, error2);
 
@@ -297,29 +330,35 @@ void MainWindow::onInversePMByLinearRegression3() {
 	cv::Mat_<double> normalized_dataY;
 	cv::Mat_<double> muX, muY;
 	cv::Mat_<double> maxX, maxY;
+	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
+	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
 	sample(2, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
+	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
+	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
+	split(normalized_dataY, 0.9, 0.1, train_normalized_dataY, test_normalized_dataY);
 
 	// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
-	cv::Mat_<double> W = normalized_dataY.inv(cv::DECOMP_SVD) * normalized_dataX;
+	cv::Mat_<double> W = train_normalized_dataY.inv(cv::DECOMP_SVD) * train_normalized_dataX;
 
 	// reverseで木を生成する
 	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
 	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
-	for (int iter = 0; iter < N; ++iter) {
-		cv::Mat normalized_x_hat = normalized_dataY.row(iter) * W;
+	for (int iter = 0; iter < test_normalized_dataY.rows; ++iter) {
+		cv::Mat normalized_x_hat = test_normalized_dataY.row(iter) * W;
 		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
-		error += (normalized_dataX.row(iter) - normalized_x_hat).mul(normalized_dataX.row(iter) - normalized_x_hat);
-		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
+		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
+		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-		if (iter % 100 == 0) {
-			glWidget->tree->setParams(dataX.row(iter));
+		if (iter % 20 == 0) {
+			glWidget->tree->setParams(test_dataX.row(iter));
 			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
+			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 
 			glWidget->tree->setParams(x_hat);
 			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
+			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 	}
@@ -358,55 +397,67 @@ void MainWindow::onInversePMByHierarchicalLR() {
 	cv::Mat_<double> normalized_dataY;
 	cv::Mat_<double> muX, muY;
 	cv::Mat_<double> maxX, maxY;
+	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
+	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
 	sample(2, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
+	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
+	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
+	split(normalized_dataY, 0.9, 0.1, train_normalized_dataY, test_normalized_dataY);
 
-	vector<cv::Mat_<float> > clusterX, clusterX2, clusterY2;
+	vector<cv::Mat_<float> > cluster_dataX, cluster_normalized_dataX, cluster_normalized_dataY;
 	vector<vector<int> > clusterIndices;
+	vector<cv::Mat_<float> > clusterCentroids;
 	{
-		cv::Mat samplesX, samplesX2, samplesY2;
-		dataX.convertTo(samplesX, CV_32F);
-		normalized_dataX.convertTo(samplesX2, CV_32F);
-		normalized_dataY.convertTo(samplesY2, CV_32F);
+		cv::Mat train_dataXf, train_normalized_dataXf, train_normalized_dataYf;
+		cv::Mat dummy;
+		train_dataX.convertTo(train_dataXf, CV_32F);
+		train_normalized_dataX.convertTo(train_normalized_dataXf, CV_32F);
+		train_normalized_dataY.convertTo(train_normalized_dataYf, CV_32F);
 		vector<int> indices(N);
 		for (int i = 0; i < N; ++i) indices[i] = i;
-		DataPartition::partition(samplesX2, samplesY2, samplesX, indices, 20, clusterX2, clusterY2, clusterX, clusterIndices);
+		DataPartition::partition(train_normalized_dataXf, train_normalized_dataYf, train_dataXf, indices, dummy, 30, cluster_normalized_dataX, cluster_normalized_dataY, cluster_dataX, clusterIndices, clusterCentroids);
 
-		for (int i = 0; i < clusterX.size(); ++i) {
-			cout << clusterX[i].rows << endl;
-		}
+		/*for (int i = 0; i < cluster_dataX.size(); ++i) {
+			cout << cluster_dataX[i].rows << endl;
+			cout << clusterCentroids[i] << endl;
+		}*/
 	}
 
-	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, normalized_dataX.cols);
-	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, normalized_dataX.cols);
-	for (int clu = 0; clu < clusterX.size(); ++clu) {
-		cv::Mat_<double> dataX;
-		clusterX[clu].convertTo(dataX, CV_64F);
-		cv::Mat_<double> normalized_dataX;
-		clusterX2[clu].convertTo(normalized_dataX, CV_64F);
-		cv::Mat_<double> normalized_dataY;
-		clusterY2[clu].convertTo(normalized_dataY, CV_64F);
+	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
+	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
+	for (int iter = 0; iter < test_normalized_dataY.rows; ++iter) {
+		cout << test_normalized_dataY.row(iter) << endl;
+		cv::Mat_<float> test_normalized_dataYf;
+		test_normalized_dataY.row(iter).convertTo(test_normalized_dataYf, CV_32F);
+		int clu = DataPartition::getClusterIndex(clusterCentroids, test_normalized_dataYf);
+
+		cv::Mat_<double> c_dataX;
+		cluster_dataX[clu].convertTo(c_dataX, CV_64F);
+		cv::Mat_<double> c_normalized_dataX;
+		cluster_normalized_dataX[clu].convertTo(c_normalized_dataX, CV_64F);
+		cv::Mat_<double> c_normalized_dataY;
+		cluster_normalized_dataY[clu].convertTo(c_normalized_dataY, CV_64F);
+
 
 		// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
-		cv::Mat_<double> W = normalized_dataY.inv(cv::DECOMP_SVD) * normalized_dataX;
+		cv::Mat_<double> W = c_normalized_dataY.inv(cv::DECOMP_SVD) * c_normalized_dataX;
 
-		// reverseで木を生成する
-		for (int iter = 0; iter < normalized_dataX.rows; ++iter) {
-			cv::Mat x2_hat = normalized_dataY.row(iter) * W;
-			cv::Mat x_hat = x2_hat.mul(maxX) + muX;
-			error += (normalized_dataX.row(iter) - x2_hat).mul(normalized_dataX.row(iter) - x2_hat);
-			error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
+		cv::Mat normalized_x_hat = test_normalized_dataY.row(iter) * W;
+		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
+		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
+		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-			if (clusterIndices[clu][iter] % 100 == 0) {
-				glWidget->tree->setParams(dataX.row(iter));
-				glWidget->updateGL();
-				QString fileName = "samples/" + QString::number(clusterIndices[clu][iter] / 100) + ".png";
-				glWidget->grabFrameBuffer().save(fileName);
+		if (iter % 20 == 0) {
+			glWidget->tree->setParams(test_dataX.row(iter));
+			glWidget->updateGL();
+			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
+			glWidget->grabFrameBuffer().save(fileName);
 
-				glWidget->tree->setParams(x_hat);
-				glWidget->updateGL();
-				fileName = "samples/reversed_" + QString::number(clusterIndices[clu][iter] / 100) + ".png";
-				glWidget->grabFrameBuffer().save(fileName);
-			}
+			glWidget->tree->setParams(x_hat);
+			glWidget->updateGL();
+			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
+			glWidget->grabFrameBuffer().save(fileName);
 		}
 	}
 
@@ -441,36 +492,41 @@ void MainWindow::onInversePMByGaussianProcess() {
 	cv::Mat_<double> normalized_dataY;
 	cv::Mat_<double> muX, muY;
 	cv::Mat_<double> maxX, maxY;
+	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
+	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
 	sample(2, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
+	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
+	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
+	split(normalized_dataY, 0.9, 0.1, train_normalized_dataY, test_normalized_dataY);
 
-	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, normalized_dataX.cols);
-	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, normalized_dataX.cols);
-
-	GaussianProcess gp(normalized_dataY);
-	for (int iter = 0; iter < normalized_dataY.rows; ++iter) {
+	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
+	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
+	GaussianProcess gp(train_normalized_dataY);
+	for (int iter = 0; iter < test_normalized_dataY.rows; ++iter) {
 		cout << iter << endl;
 
-		cv::Mat normalized_x_hat = gp.predict(normalized_dataY.row(iter), normalized_dataY, normalized_dataX);
+		cv::Mat normalized_x_hat = gp.predict(test_normalized_dataY.row(iter), train_normalized_dataY, train_normalized_dataX);
 		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
 
-		error += (normalized_dataX.row(iter) - normalized_x_hat).mul(normalized_dataX.row(iter) - normalized_x_hat);
-		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
+		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
+		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-		if (iter % 100 == 0) {
-			glWidget->tree->setParams(dataX.row(iter));
+		if (iter % 20 == 0) {
+			glWidget->tree->setParams(test_dataX.row(iter));
 			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
+			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 			
 			glWidget->tree->setParams(x_hat);
 			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
+			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 	}
 
-	error /= N;
-	error2 /= N;
+	error /= test_normalized_dataY.rows;
+	error2 /= test_normalized_dataY.rows;
 	cv::sqrt(error, error);
 	cv::sqrt(error2, error2);
 

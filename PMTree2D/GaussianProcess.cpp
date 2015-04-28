@@ -19,7 +19,6 @@ GaussianProcess::GaussianProcess(const cv::Mat_<double>& X) {
 	cv::Mat_<double> cov(N, N);
 	for (int r = 0; r < N; ++r) {
 		for (int c = 0; c < N; ++c) {
-			std::cout << ".";
 			cov(r, c) = covariance_function(X.row(r), X.row(c));
 		}
 	}

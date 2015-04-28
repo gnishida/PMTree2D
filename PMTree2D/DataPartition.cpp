@@ -17,11 +17,11 @@ using namespace std;
  * @param clusterZ [OUT]		データZのクラスタリング結果
  * @param clusterIndices [OUT]	クラスタリング結果における各要素の、元データでのindex番号
  */
-void DataPartition::partition(cv::Mat_<float> X, cv::Mat_<float> Y, cv::Mat_<float> Z, vector<int> indices, int minSize, vector<cv::Mat_<float> >&clusterX, vector<cv::Mat_<float> >&clusterY, vector<cv::Mat_<float> >&clusterZ, vector<vector<int> >& clusterIndices) {
+void DataPartition::partition(cv::Mat_<float> X, cv::Mat_<float> Y, cv::Mat_<float> Z, vector<int> indices, const cv::Mat_<float>& centroid, int minSize, vector<cv::Mat_<float> >&clusterX, vector<cv::Mat_<float> >&clusterY, vector<cv::Mat_<float> >&clusterZ, vector<vector<int> >& clusterIndices, vector<cv::Mat_<float> >& clusterCentroids) {
 	// サンプル数が32未満になるまで、繰り返し、dataX2、dataY2を分割する。
 	cv::Mat samples;
 	Y.convertTo(samples, CV_32F);
-	cv::Mat centroids;
+	cv::Mat_<float> centroids;
 	cv::Mat labels;
 	//cv::TermCriteria cri(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 50, FLT_EPSILON);
 	cv::TermCriteria cri(cv::TermCriteria::COUNT, 200, FLT_EPSILON);
@@ -35,6 +35,8 @@ void DataPartition::partition(cv::Mat_<float> X, cv::Mat_<float> Y, cv::Mat_<flo
 		clusterY.push_back(Y);
 		clusterZ.push_back(Z);
 		clusterIndices.push_back(indices);
+		clusterCentroids.push_back(centroid);
+		cout << centroid << endl;
 		return;
 	}
 
@@ -79,21 +81,21 @@ void DataPartition::partition(cv::Mat_<float> X, cv::Mat_<float> Y, cv::Mat_<flo
 		}
 	}
 
-	/*
-	vector<cv::Mat_<float> > clusterX0, clusterX1;
-	vector<cv::Mat_<float> > clusterY0, clusterY1;
-	vector<cv::Mat_<float> > clusterZ0, clusterZ1;
-	*/
-	partition(classX0, classY0, classZ0, indices0, minSize, clusterX, clusterY, clusterZ, clusterIndices);
-	partition(classX1, classY1, classZ1, indices1, minSize, clusterX, clusterY, clusterZ, clusterIndices);
+	partition(classX0, classY0, classZ0, indices0, centroids.row(0), minSize, clusterX, clusterY, clusterZ, clusterIndices, clusterCentroids);
+	partition(classX1, classY1, classZ1, indices1, centroids.row(1), minSize, clusterX, clusterY, clusterZ, clusterIndices, clusterCentroids);
+}
 
-	// clusterをマージする
-	/*
-	clusterX.insert(clusterX.end(), clusterX0.begin(), clusterX0.end());
-	clusterX.insert(clusterX.end(), clusterX1.begin(), clusterX1.end());
-	clusterY.insert(clusterY.end(), clusterY0.begin(), clusterY0.end());
-	clusterY.insert(clusterY.end(), clusterY1.begin(), clusterY1.end());
-	clusterZ.insert(clusterZ.end(), clusterZ0.begin(), clusterZ0.end());
-	clusterZ.insert(clusterZ.end(), clusterZ1.begin(), clusterZ1.end());
-	*/
+int DataPartition::getClusterIndex(const vector<cv::Mat_<float> >& clusterCentroids, const cv::Mat_<float>& v) {
+	float min_dist = std::numeric_limits<float>::max();
+	int min_index = -1;
+
+	for (int i = 0; i < clusterCentroids.size(); ++i) {
+		float dist = cv::norm(clusterCentroids[i] - v);
+		if (dist < min_dist) {
+			min_dist = dist;
+			min_index = i;
+		}
+	}
+
+	return min_index;
 }
