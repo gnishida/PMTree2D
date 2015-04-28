@@ -5,6 +5,7 @@
 #include <opencv/highgui.h>
 #include <fstream>
 #include "DataPartition.h"
+#include "GaussianProcess.h"
 
 MainWindow::MainWindow(QWidget *parent, Qt::WFlags flags) : QMainWindow(parent, flags) {
 	ui.setupUi(this);
@@ -18,6 +19,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WFlags flags) : QMainWindow(parent, 
 	connect(ui.actionInversePMByLinearRegression2, SIGNAL(triggered()), this, SLOT(onInversePMByLinearRegression2()));
 	connect(ui.actionInversePMByLinearRegression3, SIGNAL(triggered()), this, SLOT(onInversePMByLinearRegression3()));
 	connect(ui.actionInversePMByHierarchicalLR, SIGNAL(triggered()), this, SLOT(onInversePMByHierarchicalLR()));
+	connect(ui.actionInversePMByGaussianProcess, SIGNAL(triggered()), this, SLOT(onInversePMByGaussianProcess()));
 	
 	glWidget = new GLWidget3D(this);
 	setCentralWidget(glWidget);
@@ -422,6 +424,16 @@ void MainWindow::onInversePMByLinearRegression3() {
 	cout << error2 << endl;
 }
 
+/**
+ * データを階層的にクラスタリングし、各クラスタについてLinear regression
+ * を使って、high-level indicatorから対応するPMパラメータを計算する。
+ *
+ * 1) 2000個のサンプルを生成して、high-level indicatorを計算する。
+ * 2) データを、k-meansにより階層的にクラスタリングする。
+ * 3) 各クラスタについて、Linear regressionによりマッピング行列Wを計算する。
+ * 4) マッピング行列Wを使って、high-level indicatorからPMパラメータを推定する。
+ * 5) 推定値のエラーを計算する。
+ */
 void MainWindow::onInversePMByHierarchicalLR() {
 	const int N = 2000;
 
@@ -521,6 +533,103 @@ void MainWindow::onInversePMByHierarchicalLR() {
 				fileName = "samples/reversed_" + QString::number(clusterIndices[clu][iter] / 100) + ".png";
 				glWidget->grabFrameBuffer().save(fileName);
 			}
+		}
+	}
+
+	error /= N;
+	error2 /= N;
+	cv::sqrt(error, error);
+	cv::sqrt(error2, error2);
+
+	cout << "Prediction error (normalized):" << endl;
+	cout << error << endl;
+	cout << "Prediction error:" << endl;
+	cout << error2 << endl;
+}
+
+/**
+ * ガウス過程を使って、high-level indicatorから対応するPMパラメータを推定する。
+ *
+ * 1) 2000個のサンプルを生成して、high-level indicatorを計算する。
+ * 2) ガウス過程を使って、high-level indictorから、PMパラメータを推定する。
+ * 3) 推定値のエラーを計算する。
+ */
+void MainWindow::onInversePMByGaussianProcess() {
+	const int N = 2000;
+
+	if (!QDir("samples").exists()) QDir().mkdir("samples");
+
+	cout << "Generating samples..." << endl;
+
+	cv::Mat_<double> dataX(N, 14);
+	cv::Mat_<double> dataY(N, 16);
+	int seed_count = 0;
+	for (int iter = 0; iter < N; ++iter) {
+		cout << iter << endl;
+
+		while (true) {
+			glWidget->tree->randomInit(seed_count++);
+			if (glWidget->tree->generate()) break;
+		}
+
+		vector<float> params = glWidget->tree->getParams();
+		for (int col = 0; col < dataX.cols; ++col) {
+			dataX(iter, col) = params[col];
+		}
+
+		vector<float> statistics = glWidget->tree->getStatistics3();
+		for (int col = 0; col < dataY.cols - 1; ++col) {
+			dataY(iter, col) = statistics[col];
+		}
+		dataY(iter, dataY.cols - 1) = 1; // 定数項
+	}
+
+	glWidget->update();
+	controlWidget->update();
+
+	// normalization
+	cv::Mat_<double> muX, muY;
+	cv::reduce(dataX, muX, 0, CV_REDUCE_AVG);
+	cv::reduce(dataY, muY, 0, CV_REDUCE_AVG);
+	cv::Mat_<double> dataX2 = dataX - cv::repeat(muX, N, 1);
+	cv::Mat_<double> dataY2 = dataY - cv::repeat(muY, N, 1);
+
+	// [-1, 1]にする
+	cv::Mat_<double> maxX, maxY;
+	cv::reduce(cv::abs(dataX2), maxX, 0, CV_REDUCE_MAX);
+	cv::reduce(cv::abs(dataY2), maxY, 0, CV_REDUCE_MAX);
+	dataX2 /= cv::repeat(maxX, N, 1);
+	dataY2 /= cv::repeat(maxY, N, 1);
+
+	// 定数項
+	for (int r = 0; r < N; ++r) {
+		dataY2(r, dataY2.cols - 1) = 1;
+	}
+
+	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX2.cols);
+	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX2.cols);
+
+	GaussianProcess gp(dataY2);
+	for (int iter = 0; iter < dataY2.rows; ++iter) {
+		cout << iter << endl;
+
+		cv::Mat normalized_x_hat = gp.predict(dataY2.row(iter), dataY2, dataX2);
+		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
+
+		error += (dataX2.row(iter) - normalized_x_hat).mul(dataX2.row(iter) - normalized_x_hat);
+		error2 += (dataX.row(iter) - x_hat).mul(dataX.row(iter) - x_hat);
+
+		if (iter % 100 == 0) {
+			glWidget->tree->setParams(dataX.row(iter));
+			glWidget->updateGL();
+			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
+			glWidget->grabFrameBuffer().save(fileName);
+
+
+			glWidget->tree->setParams(x_hat);
+			glWidget->updateGL();
+			fileName = "samples/reversed_" + QString::number(iter / 100) + ".png";
+			glWidget->grabFrameBuffer().save(fileName);
 		}
 	}
 

@@ -68,6 +68,9 @@
     <ClCompile Include="DataPartition.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GaussianProcess.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="MainWindow.h">
@@ -103,6 +106,9 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="DataPartition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GaussianProcess.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

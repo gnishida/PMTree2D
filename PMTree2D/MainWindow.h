@@ -28,6 +28,7 @@ public slots:
 	void onInversePMByLinearRegression2();
 	void onInversePMByLinearRegression3();
 	void onInversePMByHierarchicalLR();
+	void onInversePMByGaussianProcess();
 };
 
 #endif // MAINWINDOW_H
