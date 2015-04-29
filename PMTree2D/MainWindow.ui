@@ -45,6 +45,7 @@
     <addaction name="separator"/>
     <addaction name="actionInversePMByHierarchicalLR"/>
     <addaction name="actionInversePMByGaussianProcess"/>
+    <addaction name="actionInversePMByLogisticRegression"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGenerate_Samples"/>
@@ -111,6 +112,11 @@
   <action name="actionInversePMByGaussianProcess">
    <property name="text">
     <string>Inverse PM By Gaussian Process</string>
+   </property>
+  </action>
+  <action name="actionInversePMByLogisticRegression">
+   <property name="text">
+    <string>Inverse PM By Logistic Regression</string>
    </property>
   </action>
  </widget>

@@ -6,6 +6,7 @@
 #include <fstream>
 #include "DataPartition.h"
 #include "GaussianProcess.h"
+#include "LogisticRegression.h"
 
 MainWindow::MainWindow(QWidget *parent, Qt::WFlags flags) : QMainWindow(parent, flags) {
 	ui.setupUi(this);
@@ -20,7 +21,9 @@ MainWindow::MainWindow(QWidget *parent, Qt::WFlags flags) : QMainWindow(parent, 
 	connect(ui.actionInversePMByLinearRegression3, SIGNAL(triggered()), this, SLOT(onInversePMByLinearRegression3()));
 	connect(ui.actionInversePMByHierarchicalLR, SIGNAL(triggered()), this, SLOT(onInversePMByHierarchicalLR()));
 	connect(ui.actionInversePMByGaussianProcess, SIGNAL(triggered()), this, SLOT(onInversePMByGaussianProcess()));
+	connect(ui.actionInversePMByLogisticRegression, SIGNAL(triggered()), this, SLOT(onInversePMByLogisticRegression()));
 	
+
 	glWidget = new GLWidget3D(this);
 	setCentralWidget(glWidget);
 
@@ -514,6 +517,62 @@ void MainWindow::onInversePMByGaussianProcess() {
 		QString fileName = "samples/" + QString::number(iter) + ".png";
 		glWidget->grabFrameBuffer().save(fileName);
 			
+		glWidget->tree->setParams(x_hat);
+		glWidget->updateGL();
+		fileName = "samples/reversed_" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
+	}
+
+	error /= test_normalized_dataY.rows;
+	error2 /= test_normalized_dataY.rows;
+	cv::sqrt(error, error);
+	cv::sqrt(error2, error2);
+
+	cout << "Prediction error (normalized):" << endl;
+	cout << error << endl;
+	cout << "Prediction error:" << endl;
+	cout << error2 << endl;
+}
+
+void MainWindow::onInversePMByLogisticRegression() {
+	const int N = 2000;
+
+	if (!QDir("samples").exists()) QDir().mkdir("samples");
+
+	cout << "Generating samples..." << endl;
+
+	cv::Mat_<double> dataX(N, 14);
+	cv::Mat_<double> dataY(N, 16);
+	cv::Mat_<double> normalized_dataX;
+	cv::Mat_<double> normalized_dataY;
+	cv::Mat_<double> muX, muY;
+	cv::Mat_<double> maxX, maxY;
+	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
+	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
+	//sample(2, N, true, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	sample(1, N, true, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
+	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
+	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
+	split(normalized_dataY, 0.9, 0.1, train_normalized_dataY, test_normalized_dataY);
+
+	// Logistic regression
+	LogisticRegression lr(train_normalized_dataY, train_normalized_dataX, 0.01f, 0.1f, 1000);
+
+	// reverseで木を生成する
+	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
+	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
+	for (int iter = 0; iter < test_normalized_dataY.rows; ++iter) {
+		cv::Mat normalized_x_hat = lr.predict(test_normalized_dataY.row(iter));
+		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
+		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
+		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
+
+		glWidget->tree->setParams(test_dataX.row(iter));
+		glWidget->updateGL();
+		QString fileName = "samples/" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
+
 		glWidget->tree->setParams(x_hat);
 		glWidget->updateGL();
 		fileName = "samples/reversed_" + QString::number(iter) + ".png";

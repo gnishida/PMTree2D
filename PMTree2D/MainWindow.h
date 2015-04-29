@@ -31,6 +31,7 @@ public slots:
 	void onInversePMByLinearRegression3();
 	void onInversePMByHierarchicalLR();
 	void onInversePMByGaussianProcess();
+	void onInversePMByLogisticRegression();
 };
 
 #endif // MAINWINDOW_H
