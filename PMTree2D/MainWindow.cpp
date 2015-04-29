@@ -38,16 +38,21 @@ void MainWindow::onSaveImage() {
 	glWidget->grabFrameBuffer().save(fileName);
 }
 
-void MainWindow::sample(int type, int N, cv::Mat_<double>& dataX, cv::Mat_<double>& dataY, cv::Mat_<double>& normalized_dataX, cv::Mat_<double>& normalized_dataY, cv::Mat_<double>& muX, cv::Mat_<double>& muY, cv::Mat_<double>& maxX, cv::Mat_<double>& maxY) {
+void MainWindow::sample(int type, int N, bool bias, cv::Mat_<double>& dataX, cv::Mat_<double>& dataY, cv::Mat_<double>& normalized_dataX, cv::Mat_<double>& normalized_dataY, cv::Mat_<double>& muX, cv::Mat_<double>& muY, cv::Mat_<double>& maxX, cv::Mat_<double>& maxY) {
+	int b = bias ? 1 : 0;
 	if (type == 0) {
 		dataX = cv::Mat_<double>(N, 14);
-		dataY = cv::Mat_<double>(N, 5);
+		dataY = cv::Mat_<double>(N, 4 + b);
 	} else if (type == 1) {
 		dataX = cv::Mat_<double>(N, 14);
-		dataY = cv::Mat_<double>(N, 12);
-	} else {
+		dataY = cv::Mat_<double>(N, 11 + b);
+	} else if (type == 2) {
 		dataX = cv::Mat_<double>(N, 14);
-		dataY = cv::Mat_<double>(N, 16);
+		dataY = cv::Mat_<double>(N, 15 + b);
+	} else if (type == 3) {
+		// デバッグ中。。。
+		dataX = cv::Mat_<double>(N, 2);
+		dataY = cv::Mat_<double>(N, 1 + b);
 	}
 
 	int seed_count = 0;
@@ -61,14 +66,19 @@ void MainWindow::sample(int type, int N, cv::Mat_<double>& dataX, cv::Mat_<doubl
 
 		vector<float> params = glWidget->tree->getParams();
 		for (int col = 0; col < dataX.cols; ++col) {
+			// デバッグ中。。。
+			if (type == 3 && col >= 2) break;
+
 			dataX(iter, col) = params[col];
 		}
 
 		vector<float> statistics = glWidget->tree->getStatistics(type);
-		for (int col = 0; col < dataY.cols - 1; ++col) {
+		for (int col = 0; col < dataY.cols - b; ++col) {
 			dataY(iter, col) = statistics[col];
 		}
-		dataY(iter, dataY.cols - 1) = 1; // 定数項
+		if (bias) {
+			dataY(iter, dataY.cols - 1) = 1; // 定数項
+		}
 	}
 
 	// normalization
@@ -84,8 +94,10 @@ void MainWindow::sample(int type, int N, cv::Mat_<double>& dataX, cv::Mat_<doubl
 	normalized_dataY /= cv::repeat(maxY, N, 1);
 
 	// 定数項
-	for (int r = 0; r < N; ++r) {
-		normalized_dataY(r, normalized_dataY.cols - 1) = 1;
+	if (bias) {
+		for (int r = 0; r < N; ++r) {
+			normalized_dataY(r, normalized_dataY.cols - 1) = 1;
+		}
 	}
 }
 
@@ -134,13 +146,13 @@ void MainWindow::onGenerateSamples() {
 	cv::Mat_<double> normalized_dataY;
 	cv::Mat_<double> muX, muY;
 	cv::Mat_<double> maxX, maxY;
-	sample(0, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	sample(0, N, true, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
 
 	for (int iter = 0; iter < N; ++iter) {
 		if (iter % 100 == 0) {
 			glWidget->tree->setParams(dataX.row(iter));
 			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 100) + ".png";
+			QString fileName = "samples/" + QString::number(iter) + ".png";
 			glWidget->grabFrameBuffer().save(fileName);
 		}
 	}
@@ -164,7 +176,7 @@ void MainWindow::onGenerateTrainingFiles() {
 	cv::Mat_<double> normalized_dataY;
 	cv::Mat_<double> muX, muY;
 	cv::Mat_<double> maxX, maxY;
-	sample(2, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	sample(2, N, true, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
 
 	for (int iter = 0; iter < N; ++iter) {
 		ofs << "[";
@@ -205,7 +217,7 @@ void MainWindow::onInversePMByLinearRegression() {
 	cv::Mat_<double> maxX, maxY;
 	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
 	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
-	sample(0, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	sample(0, N, true, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
 	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
 	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
 	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
@@ -224,17 +236,15 @@ void MainWindow::onInversePMByLinearRegression() {
 		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
 		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-		if (iter % 20 == 0) {
-			glWidget->tree->setParams(test_dataX.row(iter));
-			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
+		glWidget->tree->setParams(test_dataX.row(iter));
+		glWidget->updateGL();
+		QString fileName = "samples/" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 
-			glWidget->tree->setParams(x_hat);
-			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
-		}
+		glWidget->tree->setParams(x_hat);
+		glWidget->updateGL();
+		fileName = "samples/reversed_" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 	}
 
 	error /= test_normalized_dataY.rows;
@@ -269,7 +279,7 @@ void MainWindow::onInversePMByLinearRegression2() {
 	cv::Mat_<double> maxX, maxY;
 	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
 	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
-	sample(1, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	sample(1, N, true, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
 	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
 	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
 	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
@@ -288,17 +298,15 @@ void MainWindow::onInversePMByLinearRegression2() {
 		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
 		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-		if (iter % 20 == 0) {
-			glWidget->tree->setParams(test_dataX.row(iter));
-			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
+		glWidget->tree->setParams(test_dataX.row(iter));
+		glWidget->updateGL();
+		QString fileName = "samples/" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 
-			glWidget->tree->setParams(x_hat);
-			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
-		}
+		glWidget->tree->setParams(x_hat);
+		glWidget->updateGL();
+		fileName = "samples/reversed_" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 	}
 	error /= test_normalized_dataY.rows;
 	error2 /= test_normalized_dataY.rows;
@@ -332,7 +340,7 @@ void MainWindow::onInversePMByLinearRegression3() {
 	cv::Mat_<double> maxX, maxY;
 	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
 	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
-	sample(2, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	sample(2, N, true, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
 	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
 	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
 	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
@@ -350,21 +358,19 @@ void MainWindow::onInversePMByLinearRegression3() {
 		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
 		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-		if (iter % 20 == 0) {
-			glWidget->tree->setParams(test_dataX.row(iter));
-			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
+		glWidget->tree->setParams(test_dataX.row(iter));
+		glWidget->updateGL();
+		QString fileName = "samples/" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 
-			glWidget->tree->setParams(x_hat);
-			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
-		}
+		glWidget->tree->setParams(x_hat);
+		glWidget->updateGL();
+		fileName = "samples/reversed_" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 	}
 
-	error /= N;
-	error2 /= N;
+	error /= test_normalized_dataY.rows;
+	error2 /= test_normalized_dataY.rows;
 	cv::sqrt(error, error);
 	cv::sqrt(error2, error2);
 
@@ -399,7 +405,7 @@ void MainWindow::onInversePMByHierarchicalLR() {
 	cv::Mat_<double> maxX, maxY;
 	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
 	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
-	sample(2, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	sample(2, N, true, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
 	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
 	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
 	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
@@ -410,24 +416,18 @@ void MainWindow::onInversePMByHierarchicalLR() {
 	vector<cv::Mat_<float> > clusterCentroids;
 	{
 		cv::Mat train_dataXf, train_normalized_dataXf, train_normalized_dataYf;
-		cv::Mat dummy;
+		cv::Mat_<float> dummy = cv::Mat_<float>::zeros(1, train_normalized_dataY.cols);
 		train_dataX.convertTo(train_dataXf, CV_32F);
 		train_normalized_dataX.convertTo(train_normalized_dataXf, CV_32F);
 		train_normalized_dataY.convertTo(train_normalized_dataYf, CV_32F);
 		vector<int> indices(N);
 		for (int i = 0; i < N; ++i) indices[i] = i;
-		DataPartition::partition(train_normalized_dataXf, train_normalized_dataYf, train_dataXf, indices, dummy, 30, cluster_normalized_dataX, cluster_normalized_dataY, cluster_dataX, clusterIndices, clusterCentroids);
-
-		/*for (int i = 0; i < cluster_dataX.size(); ++i) {
-			cout << cluster_dataX[i].rows << endl;
-			cout << clusterCentroids[i] << endl;
-		}*/
+		DataPartition::partition(train_normalized_dataXf, train_normalized_dataYf, train_dataXf, indices, dummy, 250, cluster_normalized_dataX, cluster_normalized_dataY, cluster_dataX, clusterIndices, clusterCentroids);
 	}
 
 	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
 	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
 	for (int iter = 0; iter < test_normalized_dataY.rows; ++iter) {
-		cout << test_normalized_dataY.row(iter) << endl;
 		cv::Mat_<float> test_normalized_dataYf;
 		test_normalized_dataY.row(iter).convertTo(test_normalized_dataYf, CV_32F);
 		int clu = DataPartition::getClusterIndex(clusterCentroids, test_normalized_dataYf);
@@ -439,30 +439,29 @@ void MainWindow::onInversePMByHierarchicalLR() {
 		cv::Mat_<double> c_normalized_dataY;
 		cluster_normalized_dataY[clu].convertTo(c_normalized_dataY, CV_64F);
 
-
 		// Linear regressionにより、Wを求める（yW = x より、W = y^+ x)
 		cv::Mat_<double> W = c_normalized_dataY.inv(cv::DECOMP_SVD) * c_normalized_dataX;
 
+
 		cv::Mat normalized_x_hat = test_normalized_dataY.row(iter) * W;
 		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
+		
 		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
 		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
+		
+		glWidget->tree->setParams(test_dataX.row(iter));
+		glWidget->updateGL();
+		QString fileName = "samples/" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 
-		if (iter % 20 == 0) {
-			glWidget->tree->setParams(test_dataX.row(iter));
-			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
-
-			glWidget->tree->setParams(x_hat);
-			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
-		}
+		glWidget->tree->setParams(x_hat);
+		glWidget->updateGL();
+		fileName = "samples/reversed_" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 	}
 
-	error /= N;
-	error2 /= N;
+	error /= test_normalized_dataY.rows;
+	error2 /= test_normalized_dataY.rows;
 	cv::sqrt(error, error);
 	cv::sqrt(error2, error2);
 
@@ -487,14 +486,14 @@ void MainWindow::onInversePMByGaussianProcess() {
 	cout << "Generating samples..." << endl;
 
 	cv::Mat_<double> dataX(N, 14);
-	cv::Mat_<double> dataY(N, 16);
+	cv::Mat_<double> dataY(N, 15);
 	cv::Mat_<double> normalized_dataX;
 	cv::Mat_<double> normalized_dataY;
 	cv::Mat_<double> muX, muY;
 	cv::Mat_<double> maxX, maxY;
 	cv::Mat_<double> train_dataX, train_dataY, test_dataX, test_dataY;
 	cv::Mat_<double> train_normalized_dataX, train_normalized_dataY, test_normalized_dataX, test_normalized_dataY;
-	sample(2, N, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
+	sample(2, N, false, dataX, dataY, normalized_dataX, normalized_dataY, muX, muY, maxX, maxY);
 	split(dataX, 0.9, 0.1, train_dataX, test_dataX);
 	split(dataY, 0.9, 0.1, train_dataY, test_dataY);
 	split(normalized_dataX, 0.9, 0.1, train_normalized_dataX, test_normalized_dataX);
@@ -502,27 +501,23 @@ void MainWindow::onInversePMByGaussianProcess() {
 
 	cv::Mat_<double> error = cv::Mat_<double>::zeros(1, dataX.cols);
 	cv::Mat_<double> error2 = cv::Mat_<double>::zeros(1, dataX.cols);
-	GaussianProcess gp(train_normalized_dataY);
+	GaussianProcess gp(train_normalized_dataY, 1.0f, 50.0f);
 	for (int iter = 0; iter < test_normalized_dataY.rows; ++iter) {
-		cout << iter << endl;
-
 		cv::Mat normalized_x_hat = gp.predict(test_normalized_dataY.row(iter), train_normalized_dataY, train_normalized_dataX);
 		cv::Mat x_hat = normalized_x_hat.mul(maxX) + muX;
 
 		error += (test_normalized_dataX.row(iter) - normalized_x_hat).mul(test_normalized_dataX.row(iter) - normalized_x_hat);
 		error2 += (test_dataX.row(iter) - x_hat).mul(test_dataX.row(iter) - x_hat);
 
-		if (iter % 20 == 0) {
-			glWidget->tree->setParams(test_dataX.row(iter));
-			glWidget->updateGL();
-			QString fileName = "samples/" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
+		glWidget->tree->setParams(test_dataX.row(iter));
+		glWidget->updateGL();
+		QString fileName = "samples/" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 			
-			glWidget->tree->setParams(x_hat);
-			glWidget->updateGL();
-			fileName = "samples/reversed_" + QString::number(iter / 20) + ".png";
-			glWidget->grabFrameBuffer().save(fileName);
-		}
+		glWidget->tree->setParams(x_hat);
+		glWidget->updateGL();
+		fileName = "samples/reversed_" + QString::number(iter) + ".png";
+		glWidget->grabFrameBuffer().save(fileName);
 	}
 
 	error /= test_normalized_dataY.rows;

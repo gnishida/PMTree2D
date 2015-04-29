@@ -5,15 +5,9 @@
  *
  * @param X		データ群 (各行が、各データx_iを表す)
  */
-GaussianProcess::GaussianProcess(const cv::Mat_<double>& X) {
+GaussianProcess::GaussianProcess(const cv::Mat_<double>& X, float theta_0, float theta_1, float theta_2, float theta_3) : theta_0(theta_0), theta_1(theta_1), theta_2(theta_2), theta_3(theta_3) {
 	// データ数
 	int N = X.rows;
-
-	// hyperparameterを適当にセットする
-	theta_0 = 1.0;
-	theta_1 = 16.0;
-	theta_2 = 0.0;
-	theta_3 = 0.0;
 
 	// Covを計算する
 	cv::Mat_<double> cov(N, N);

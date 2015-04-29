@@ -18,7 +18,7 @@ public:
 	MainWindow(QWidget *parent = 0, Qt::WFlags flags = 0);
 	
 	//void saveImage();
-	void sample(int type, int N, cv::Mat_<double>& dataX, cv::Mat_<double>& dataY, cv::Mat_<double>& normalized_dataX, cv::Mat_<double>& normalized_dataY, cv::Mat_<double>& muX, cv::Mat_<double>& muY, cv::Mat_<double>& maxX, cv::Mat_<double>& maxY);
+	void sample(int type, int N, bool bias, cv::Mat_<double>& dataX, cv::Mat_<double>& dataY, cv::Mat_<double>& normalized_dataX, cv::Mat_<double>& normalized_dataY, cv::Mat_<double>& muX, cv::Mat_<double>& muY, cv::Mat_<double>& maxX, cv::Mat_<double>& maxY);
 	void split(const cv::Mat_<double>& data, float train_ratio, float test_ratio, cv::Mat_<double>& train_data, cv::Mat_<double>& test_data);
 
 public slots:

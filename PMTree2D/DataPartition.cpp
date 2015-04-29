@@ -36,7 +36,7 @@ void DataPartition::partition(cv::Mat_<float> X, cv::Mat_<float> Y, cv::Mat_<flo
 		clusterZ.push_back(Z);
 		clusterIndices.push_back(indices);
 		clusterCentroids.push_back(centroid);
-		cout << centroid << endl;
+		//cout << centroid << endl;
 		return;
 	}
 

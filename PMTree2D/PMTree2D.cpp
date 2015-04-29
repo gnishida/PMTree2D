@@ -272,7 +272,7 @@ vector<float> PMTree2D::getStatistics(int type) {
 		ret[10] = stats.avg_curvature;
 
 		return ret;
-	} else {
+	} else if (type == 2) {
 		vector<float> ret(15);
 		ret[0] = stats.maxY;
 		ret[1] = stats.maxX - stats.minX;
@@ -290,6 +290,11 @@ vector<float> PMTree2D::getStatistics(int type) {
 		ret[13] = stats.curvature_histogram[3];
 		ret[14] = stats.curvature_histogram[4];
 
+		return ret;
+	} else if (type == 3) {
+		// デバッグ中。。。
+		vector<float> ret(1);
+		ret[0] = stats.maxY;
 		return ret;
 	}
 }
