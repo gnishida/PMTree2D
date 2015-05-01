@@ -74,6 +74,15 @@
     <ClCompile Include="LogisticRegression.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HiddenLayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LinearRegression.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MLP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="MainWindow.h">
@@ -116,6 +125,15 @@
     </ClInclude>
     <ClInclude Include="LogisticRegression.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HiddenLayer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LinearRegression.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MLP.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
