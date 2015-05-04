@@ -32,7 +32,7 @@ public:
 	int shape;
 	float radius;
 	int baseSplits;
-	float splitAngle;
+	int splitAngle;
 	float taper;
 	int levels;
 	int curveRes;

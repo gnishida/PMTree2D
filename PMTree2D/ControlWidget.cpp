@@ -24,13 +24,13 @@ ControlWidget::ControlWidget(MainWindow* mainWin) : QDockWidget("Control Widget"
 	ui.horizontalSliderSplitAngle->setMaximum(80);
 	ui.lineEditTaper->setText("0");
 
-	ui.horizontalSliderBase0->setMaximum(50);
+	ui.horizontalSliderBase0->setMaximum(80);
 	ui.horizontalSliderCurve0->setMinimum(-80);
 	ui.horizontalSliderCurve0->setMaximum(80);
 	ui.horizontalSliderCurveV0->setMinimum(0);
 	ui.horizontalSliderCurveV0->setMaximum(100);
 
-	ui.horizontalSliderBase1->setMaximum(50);
+	ui.horizontalSliderBase1->setMaximum(80);
 	ui.horizontalSliderCurve1->setMinimum(-110);
 	ui.horizontalSliderCurve1->setMaximum(110);
 	ui.horizontalSliderCurveV1->setMinimum(0);

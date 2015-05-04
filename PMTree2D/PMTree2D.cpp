@@ -21,7 +21,7 @@ PMTree2D::PMTree2D() {
 	radius = 0.15;
 	baseSplits = 0;
 	splitAngle = 0;
-	taper = 0;
+	taper = 1;
 	levels = 2;
 	curveRes = 10;
 
@@ -73,6 +73,7 @@ bool PMTree2D::generate() {
 	stats.density = cv::Mat_<int>::zeros(20, 20);
 	stats.curvature = cv::Mat_<int>::zeros(20, 20);
 	
+	// 木を生成する
 	glm::mat4 modelMat;
 	generateStem(0, modelMat, radius, length0);
 
@@ -87,6 +88,7 @@ bool PMTree2D::generate() {
 	}
 	*/
 	
+	// 変な木が生成された場合は、falseを返却する
 	if (2 * (stats.totalLength[0] + stats.totalLength[1]) > stats.totalLength[2]) {
 		//cout << "too few leaves!" << endl;
 		return false;
@@ -167,22 +169,31 @@ void PMTree2D::randomInit(int seed) {
 	std::seed_seq seq(seeds.begin(), seeds.end());
 	mt.seed(seq);
 
-	base[0] = genRand(0, 0.5);
+	shape = (int)genRand(0, 8);
+	radius = genRand(0.01, 0.99);
+	baseSplits = genRand() > 0.9 ? 1 : 0;
+	splitAngle = 0;
+	if (baseSplits == 1) {
+		splitAngle = genRand(10, 80);
+	}
+	taper = genRand(0, 3);
+
+	base[0] = genRand(0, 0.8);
 	curve[0] = genRand(-30, 30);
 	curveV[0] = genRand(0, 100);
 
-	base[1] = genRand(0, 0.5);
+	base[1] = genRand(0, 0.8);
 	curve[1] = genRand(-110, 110);
-	curveV[1] = genRand(0, 100);
-	branches[1] = genRand(10, 40);
+	curveV[1] = genRand(0, 140);
+	branches[1] = genRand(5, 40);
 	downAngle[1] = genRand(20, 70);
-	ratio[1] = genRand(0.3, 0.7);
+	ratio[1] = genRand(0.2, 0.7);
 
 	curve[2] = genRand(-110, 110);
-	curveV[2] = genRand(0, 100);
-	branches[2] = genRand(10, 40);
+	curveV[2] = genRand(0, 140);
+	branches[2] = genRand(5, 40);
 	downAngle[2] = genRand(10, 50);
-	ratio[2] = genRand(0.3, 0.7);
+	ratio[2] = genRand(0.2, 0.7);
 }
 
 /**
@@ -198,22 +209,38 @@ void PMTree2D::setParams(const cv::Mat_<float>& mat) {
 		m = mat.clone();
 	}
 
-	base[0] = m(0, 0);
-	curve[0] = m(1, 0);
-	curveV[0] = m(2, 0);
-	base[1] = m(3, 0);
-	curve[1] = m(4, 0);
-	curveV[1] = m(5, 0);
-	branches[1] = m(6, 0);
-	downAngle[1] = m(7, 0);
-	ratio[1] = m(8, 0);
-	curve[2] = m(9, 0);
-	curveV[2] = m(10, 0);
-	branches[2] = m(11, 0);
-	downAngle[2] = m(12, 0);
-	ratio[2] = m(13, 0);
+	shape = m(0, 0);
+	radius = m(1, 0);
+	baseSplits = m(2, 0);
+	splitAngle = m(3, 0);
+	taper = m(4, 0);
 
-	// hard constraints
+	base[0] = m(5, 0);
+	curve[0] = m(6, 0);
+	curveV[0] = m(7, 0);
+	base[1] = m(8, 0);
+	curve[1] = m(9, 0);
+	curveV[1] = m(10, 0);
+	branches[1] = m(11, 0);
+	downAngle[1] = m(12, 0);
+	ratio[1] = m(13, 0);
+	curve[2] = m(14, 0);
+	curveV[2] = m(15, 0);
+	branches[2] = m(16, 0);
+	downAngle[2] = m(17, 0);
+	ratio[2] = m(18, 0);
+
+	// Hard constraintsに従って、値を修正する
+	shape = (int)glm::clamp(shape, 0, 7);
+	radius = glm::clamp(radius, 0.01f, 0.99f);
+	baseSplits = (int)glm::clamp(baseSplits, 0, 1);
+	if (baseSplits == 0) {
+		splitAngle = 0;
+	} else {
+		splitAngle = glm::clamp(splitAngle, 10, 80);
+	}
+	taper = glm::clamp(taper, 0.0f, 3.0f);
+
 	base[0] = glm::clamp(base[0], 0.0f, 0.5f);
 	curve[0] = glm::clamp(curve[0], -30, 30);
 	curveV[0] = glm::clamp(curveV[0], 0, 100);
@@ -232,22 +259,34 @@ void PMTree2D::setParams(const cv::Mat_<float>& mat) {
 	ratio[2] = glm::clamp(ratio[1], 0.3f, 0.7f);
 }
 
+/**
+ * パラメータの配列を返却する。
+ *
+ * @return		パラメータの配列
+ */
 vector<float> PMTree2D::getParams() {
-	vector<float> ret(14);
-	ret[0] = base[0];
-	ret[1] = curve[0];
-	ret[2] = curveV[0];
-	ret[3] = base[1];
-	ret[4] = curve[1];
-	ret[5] = curveV[1];
-	ret[6] = branches[1];
-	ret[7] = downAngle[1];
-	ret[8] = ratio[1];
-	ret[9] = curve[2];
-	ret[10] = curveV[2];
-	ret[11] = branches[2];
-	ret[12] = downAngle[2];
-	ret[13] = ratio[2];
+	vector<float> ret(19);
+
+	ret[0] = shape;
+	ret[1] = radius;
+	ret[2] = baseSplits;
+	ret[3] = splitAngle;
+	ret[4] = taper;
+
+	ret[5] = base[0];
+	ret[6] = curve[0];
+	ret[7] = curveV[0];
+	ret[8] = base[1];
+	ret[9] = curve[1];
+	ret[10] = curveV[1];
+	ret[11] = branches[1];
+	ret[12] = downAngle[1];
+	ret[13] = ratio[1];
+	ret[14] = curve[2];
+	ret[15] = curveV[2];
+	ret[16] = branches[2];
+	ret[17] = downAngle[2];
+	ret[18] = ratio[2];
 
 	return ret;
 }
@@ -306,7 +345,7 @@ vector<float> PMTree2D::getStatistics(int type) {
 }
 
 /**
- * 枝を生成する。
+ * １つの枝(stem)を生成する。
  *
  * @param level			階層レベル
  * @param modelMat		モデル行列
@@ -316,7 +355,7 @@ vector<float> PMTree2D::getStatistics(int type) {
 void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float length) {
 	float segment_length = length / curveRes;
 
-	if (level == 0 && baseSplits > 0 && splitAngle != 0.0f) { // base split (論文の4.2節、nBaseSplitsを参照)
+	if (level == 0 && baseSplits > 0 && splitAngle != 0.0f) { // base splitありの場合の、枝の生成 (論文の4.2節、nBaseSplitsを参照)
 		int splitIndex = base[0] * curveRes; // splitを開始するセグメントindex
 
 		int rot = 0;
@@ -354,7 +393,7 @@ void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float l
 				splitModelMat[s] = glm::rotate(splitModelMat[s], deg2rad(c), glm::vec3(0, 0, 1));
 			}
 		}
-	} else {
+	} else { // base splitなしの場合の、枝の生成
 		int rot = 0;
 		for (int i = 0; i < curveRes; ++i) {
 			float z1 = (float)i / curveRes;
@@ -365,13 +404,12 @@ void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float l
 
 			modelMat = glm::translate(modelMat, glm::vec3(0, segment_length, 0));		
 			modelMat = glm::rotate(modelMat, deg2rad(c), glm::vec3(0, 0, 1));
-			//modelMat = rotate(modelMat, deg2rad(rot), vec3(0, 1, 0));
 		}
 	}
 }
 
 /**
- * 枝の１つのセグメントを生成する。
+ * 枝(stem)の１つのセグメントを生成する。
  *
  * @param level				階層レベル
  * @param index				セグメントのindex
@@ -385,10 +423,7 @@ void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float l
  * @param curvature			この枝の曲率
  */
 void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float radius, float z1, float z2, float length, float segment_length, int& rot, const QColor& color, float curvature) {
-	//radius1 = max(radius1, 0.001f);
-	//radius2 = max(radius2, 0.001f);
-
-	int stacks = 5;
+	int stacks = ceil(segment_length / 0.5);
 	for (int i = 0; i < stacks; ++i) {
 		float zs1 = z1 + (z2 - z1) * i / stacks;
 		float zs2 = z1 + (z2 - z1) * (i + 1) / stacks;
@@ -421,7 +456,7 @@ void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float r
 	for (int i = 0; i < substems_eff; ++i) {
 		float offset = stem_start + i * interval + segment_length * index;
 
-		// このzにおけるセグメントの半径
+		// この位置におけるセグメントの半径
 		float r = computeRadius(radius, length, offset / length);
 
 		glm::mat4 modelMat2 = glm::rotate(modelMat, deg2rad(downAngle[level + 1]), glm::vec3(0, 0, 1));
@@ -540,6 +575,15 @@ float PMTree2D::shapeRatio(int shape, float ratio) {
 	}
 }
 
+/**
+ * この枝(stem)における、指定された位置での半径を計算して返却する。
+ * 論文の4.4節に基づく。
+ *
+ * @param radius	この枝の根元側の半径
+ * @param length	この枝の長さ
+ * @param z			この枝における、指定された位置の高さ（[0, 1]で指定）
+ * @return			指定された位置での半径
+ */
 float PMTree2D::computeRadius(float radius, float length, float z) {
 	float unit_taper;
 	if (taper < 1) {
