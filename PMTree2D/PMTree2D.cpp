@@ -17,6 +17,7 @@ void PMTree2DStats::clear() {
 }
 
 PMTree2D::PMTree2D() {
+	shape = 7;
 	curveRes = 10;
 	levels = 2;
 
@@ -296,6 +297,8 @@ vector<float> PMTree2D::getStatistics(int type) {
 		vector<float> ret(1);
 		ret[0] = stats.maxY;
 		return ret;
+	} else {
+		return vector<float>(0);
 	}
 }
 
@@ -349,7 +352,7 @@ void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float r
 
 		glm::mat4 modelMat2 = glm::rotate(modelMat, deg2rad(downAngle[level + 1]), glm::vec3(0, 0, 1));
 
-		float sub_ratio = ratio[level + 1] * (length - offset) / length;
+		float sub_ratio = ratio[level + 1] * shapeRatio(shape, (length - offset) / length);
 
 		generateStem(level + 1, modelMat2, radius1 * sub_ratio, length * sub_ratio);
 
@@ -421,6 +424,44 @@ void PMTree2D::drawQuad(const glm::mat4& modelMat, float top, float base, float 
 		}
 		stats.density += dDensity;
 		stats.curvature += dCurvature;
+	}
+}
+
+/**
+ * Shape ratioを返却する。
+ * 論文Cretion and rendering of realistic treesの4.3節に記載されている内容に基づく。
+ *
+ * @param shape		shape id
+ * @param ratio		ratio
+ * @return			shape ratio
+ */
+float PMTree2D::shapeRatio(int shape, float ratio) {
+	if (shape == 0) {
+		return 0.2f + 0.8f * ratio;
+	} else if (shape == 1) {
+		return 0.2f + 0.8f * sinf(M_PI * ratio);
+	} else if (shape == 2) {
+		return 0.2f + 0.8f * sinf(0.5f * M_PI * ratio);
+	} else if (shape == 3) {
+		return 1.0f;
+	} else if (shape == 4) {
+		return 0.5f + 0.5f * ratio;
+	} else if (shape == 5) {
+		if (ratio <= 0.7f) {
+			return ratio / 0.7f;
+		} else {
+			return (1.0f - ratio) / 0.3f;
+		}
+	} else if (shape == 6) {
+		return 1.0f - 0.8f * ratio;
+	} else if (shape == 7) {
+		if (ratio <= 0.7f) {
+			return 0.5f + 0.5f * ratio / 0.7f;
+		} else {
+			return 0.5f + 0.5f * (1.0f - ratio) / 0.3f;
+		}
+	} else {
+		return 0.0f;
 	}
 }
 

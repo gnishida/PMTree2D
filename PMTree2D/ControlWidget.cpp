@@ -9,6 +9,15 @@ ControlWidget::ControlWidget(MainWindow* mainWin) : QDockWidget("Control Widget"
 	// set up the UI
 	ui.setupUi(this);
 
+	ui.comboBoxShape->addItem("conical");
+	ui.comboBoxShape->addItem("spherical");
+	ui.comboBoxShape->addItem("hemispherical");
+	ui.comboBoxShape->addItem("cylindrical");
+	ui.comboBoxShape->addItem("tapered cylindrical");
+	ui.comboBoxShape->addItem("flame");
+	ui.comboBoxShape->addItem("inverse conical");
+	ui.comboBoxShape->addItem("tend flame");
+
 	ui.horizontalSliderBase0->setMaximum(50);
 	ui.horizontalSliderCurve0->setMinimum(-80);
 	ui.horizontalSliderCurve0->setMaximum(80);
@@ -40,6 +49,8 @@ ControlWidget::ControlWidget(MainWindow* mainWin) : QDockWidget("Control Widget"
 
 	update();
 
+	connect(ui.comboBoxShape, SIGNAL(currentIndexChanged(int)), this, SLOT(onValueChanged()));
+
 	connect(ui.horizontalSliderBase0, SIGNAL(sliderMoved(int)), this, SLOT(onValueChanged()));
 	connect(ui.horizontalSliderCurve0, SIGNAL(sliderMoved(int)), this, SLOT(onValueChanged()));
 	connect(ui.horizontalSliderCurveV0, SIGNAL(sliderMoved(int)), this, SLOT(onValueChanged()));
@@ -63,6 +74,9 @@ ControlWidget::ControlWidget(MainWindow* mainWin) : QDockWidget("Control Widget"
 void ControlWidget::update() {
 	PMTree2D* tree = mainWin->glWidget->tree;
 
+	ui.comboBoxShape->blockSignals(true);
+
+	ui.comboBoxShape->setCurrentIndex(tree->shape);
 	ui.horizontalSliderBase0->setValue(tree->base[0] * 100);
 	ui.horizontalSliderCurve0->setValue(tree->curve[0]);
 	ui.horizontalSliderCurveV0->setValue(tree->curveV[0]);
@@ -79,10 +93,14 @@ void ControlWidget::update() {
 	ui.horizontalSliderBranches2->setValue(tree->branches[2]);
 	ui.horizontalSliderDownAngle2->setValue(tree->downAngle[2]);
 	ui.horizontalSliderRatio2->setValue(tree->ratio[2] * 100);
+
+	ui.comboBoxShape->blockSignals(false);
 }
 
 void ControlWidget::onValueChanged() {
 	PMTree2D* tree = mainWin->glWidget->tree;
+	
+	tree->shape = ui.comboBoxShape->currentIndex();
 
 	tree->base[0] = ui.horizontalSliderBase0->value() / 100.0f;
 	tree->curve[0] = ui.horizontalSliderCurve0->value();

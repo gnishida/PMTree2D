@@ -29,6 +29,7 @@ public:
 
 class PMTree2D {
 public:
+	int shape;
 	int curveRes;
 	int levels;
 	vector<float> base;
@@ -56,6 +57,8 @@ private:
 	void generateStem(int level, glm::mat4 modelMat, float radius, float length);
 	void generateSegment(int level, int index, glm::mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color, float curvature);
 	void drawQuad(const glm::mat4& modelMat, float top, float base, float height, const QColor& color, float curvature);
+
+	float shapeRatio(int shape, float ratio);
 
 	float genRand();
 	float genRand(float a, float b);
