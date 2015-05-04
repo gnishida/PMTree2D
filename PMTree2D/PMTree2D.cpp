@@ -18,8 +18,12 @@ void PMTree2DStats::clear() {
 
 PMTree2D::PMTree2D() {
 	shape = 7;
-	curveRes = 10;
+	radius = 0.15;
+	baseSplits = 0;
+	splitAngle = 0;
+	taper = 0;
 	levels = 2;
+	curveRes = 10;
 
 	base.resize(levels + 1);
 	curve.resize(levels + 1);
@@ -60,7 +64,6 @@ bool PMTree2D::generate() {
 	std::seed_seq seq(seeds.begin(), seeds.end());
 	mt.seed(seq);
 
-	float radius0 = 0.15;
 	float length0 = 10.0;
 
 	// 統計情報をクリア
@@ -71,7 +74,7 @@ bool PMTree2D::generate() {
 	stats.curvature = cv::Mat_<int>::zeros(20, 20);
 	
 	glm::mat4 modelMat;
-	generateStem(0, modelMat, radius0, length0);
+	generateStem(0, modelMat, radius, length0);
 
 	/*
 	cout << "Total Length:" << endl;
@@ -302,31 +305,101 @@ vector<float> PMTree2D::getStatistics(int type) {
 	}
 }
 
+/**
+ * 枝を生成する。
+ *
+ * @param level			階層レベル
+ * @param modelMat		モデル行列
+ * @param raidus		根元側の半径
+ * @param length		枝の長さ
+ */
 void PMTree2D::generateStem(int level, glm::mat4 modelMat, float radius, float length) {
 	float segment_length = length / curveRes;
 
-	int rot = 0;
-	for (int i = 0; i < curveRes; ++i) {
-		float r1 = radius * (curveRes - i) / curveRes;
-		float r2 = radius * (curveRes - i - 1) / curveRes;
-		float c = genRandV(curve[level] / curveRes, curveV[level] / curveRes);
-		generateSegment(level, i, modelMat, r1, r2, length, segment_length, rot, QColor(0, 160 * i / curveRes, 0), c / segment_length);
+	if (level == 0 && baseSplits > 0 && splitAngle != 0.0f) { // base split (論文の4.2節、nBaseSplitsを参照)
+		int splitIndex = base[0] * curveRes; // splitを開始するセグメントindex
 
-		modelMat = glm::translate(modelMat, glm::vec3(0, segment_length, 0));		
-		modelMat = glm::rotate(modelMat, deg2rad(c), glm::vec3(0, 0, 1));
-		//modelMat = rotate(modelMat, deg2rad(rot), vec3(0, 1, 0));
+		int rot = 0;
+
+		// split前のセグメント
+		for (int i = 0; i < splitIndex; ++i) {
+			float z1 = (float)i / curveRes;
+			float z2 = (float)(i + 1) / curveRes;
+
+			float c = genRandV(curve[level] / curveRes, curveV[level] / curveRes);
+			generateSegment(level, i, modelMat, radius, z1, z2, length, segment_length, rot, QColor(0, 160 * i / curveRes, 0), c / segment_length);
+
+			modelMat = glm::translate(modelMat, glm::vec3(0, segment_length, 0));
+			modelMat = glm::rotate(modelMat, deg2rad(c), glm::vec3(0, 0, 1));
+		}
+
+		vector<glm::mat4> splitModelMat(baseSplits + 1);
+		for (int s = 0; s < baseSplits + 1; ++s) {
+			splitModelMat[s] = glm::rotate(modelMat, deg2rad(splitAngle), glm::vec3(0, 0, 1));
+
+			modelMat = glm::rotate(modelMat, deg2rad(360 / (baseSplits + 1)), glm::vec3(0, 1, 0));
+		}
+
+		// split後のセグメント
+		for (int s = 0; s < baseSplits + 1; ++s) {
+			for (int i = splitIndex; i < curveRes; ++i) {
+				float z1 = (float)i / curveRes;
+				float z2 = (float)(i + 1) / curveRes;
+
+				float c = genRandV(curve[level] / curveRes, curveV[level] / curveRes);
+				generateSegment(level, i, splitModelMat[s], radius, z1, z2, length, segment_length, rot, QColor(0, 160 * i / curveRes, 0), c / segment_length);
+
+				splitModelMat[s] = glm::translate(splitModelMat[s], glm::vec3(0, segment_length, 0));
+				splitModelMat[s] = glm::rotate(splitModelMat[s], deg2rad(-splitAngle / (curveRes - splitIndex - 1)), glm::vec3(0, 0, 1));
+				splitModelMat[s] = glm::rotate(splitModelMat[s], deg2rad(c), glm::vec3(0, 0, 1));
+			}
+		}
+	} else {
+		int rot = 0;
+		for (int i = 0; i < curveRes; ++i) {
+			float z1 = (float)i / curveRes;
+			float z2 = (float)(i + 1) / curveRes;
+
+			float c = genRandV(curve[level] / curveRes, curveV[level] / curveRes);
+			generateSegment(level, i, modelMat, radius, z1, z2, length, segment_length, rot, QColor(0, 160 * i / curveRes, 0), c / segment_length);
+
+			modelMat = glm::translate(modelMat, glm::vec3(0, segment_length, 0));		
+			modelMat = glm::rotate(modelMat, deg2rad(c), glm::vec3(0, 0, 1));
+			//modelMat = rotate(modelMat, deg2rad(rot), vec3(0, 1, 0));
+		}
 	}
 }
 
-void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float radius1, float radius2, float length, float segment_length, int& rot, const QColor& color, float curvature) {
-	radius1 = max(radius1, 0.001f);
-	radius2 = max(radius2, 0.001f);
+/**
+ * 枝の１つのセグメントを生成する。
+ *
+ * @param level				階層レベル
+ * @param index				セグメントのindex
+ * @param modelMat			モデル行列
+ * @param radius1			根元側の半径
+ * @param radius2			先端側の半径
+ * @param length			枝の長さ
+ * @param segment_length	このセグメントの長さ
+ * @param rot				この枝における、回転角度
+ * @param color				色
+ * @param curvature			この枝の曲率
+ */
+void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float radius, float z1, float z2, float length, float segment_length, int& rot, const QColor& color, float curvature) {
+	//radius1 = max(radius1, 0.001f);
+	//radius2 = max(radius2, 0.001f);
 
-	drawQuad(modelMat, radius2 * 2, radius1 * 2, segment_length, color, curvature);
+	int stacks = 5;
+	for (int i = 0; i < stacks; ++i) {
+		float zs1 = z1 + (z2 - z1) * i / stacks;
+		float zs2 = z1 + (z2 - z1) * (i + 1) / stacks;
+		glm::mat4 modelMat2 = glm::translate(modelMat, glm::vec3(0, segment_length / stacks * i, 0));
+
+		drawQuad(modelMat2, computeRadius(radius, length, zs2) * 2, computeRadius(radius, length, zs1) * 2, segment_length / stacks, color, curvature);
+	}
 
 	// 統計情報を更新
 	stats.totalLength[level] += segment_length;
-	stats.totalVolume[level] += segment_length * (radius1 * radius1);
+	stats.totalVolume[level] += segment_length * (computeRadius(radius, length, z1) + computeRadius(radius, length, z2));
 
 	if (level >= levels) return;
 
@@ -340,8 +413,6 @@ void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float r
 		}
 	}
 
-	//int substems_eff = branches[level + 1] / (float)curveRes * (segment_length - stem_start) / segment_length;
-	//float interval = (segment_length - stem_start) / substems_eff;
 	float interval = length * (1 - base[level]) / (branches[level + 1] - 1);
 	int substems_eff = (segment_length - stem_start) / interval + 1;
 
@@ -350,11 +421,15 @@ void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float r
 	for (int i = 0; i < substems_eff; ++i) {
 		float offset = stem_start + i * interval + segment_length * index;
 
+		// このzにおけるセグメントの半径
+		float r = computeRadius(radius, length, offset / length);
+
 		glm::mat4 modelMat2 = glm::rotate(modelMat, deg2rad(downAngle[level + 1]), glm::vec3(0, 0, 1));
+		modelMat2 = glm::translate(modelMat2, glm::vec3(0, r, 0));
 
 		float sub_ratio = ratio[level + 1] * shapeRatio(shape, (length - offset) / (length * (1.0 - base[level])));
 
-		generateStem(level + 1, modelMat2, radius1 * sub_ratio, length * sub_ratio);
+		generateStem(level + 1, modelMat2, r * sub_ratio, length * sub_ratio);
 
 		modelMat = glm::rotate(modelMat, deg2rad(180), glm::vec3(0, 1, 0));
 		rot = (rot + 180) % 360;
@@ -462,6 +537,44 @@ float PMTree2D::shapeRatio(int shape, float ratio) {
 		}
 	} else {
 		return 0.0f;
+	}
+}
+
+float PMTree2D::computeRadius(float radius, float length, float z) {
+	float unit_taper;
+	if (taper < 1) {
+		unit_taper = taper;
+	} else if (taper < 2) {
+		unit_taper = 2 - taper;
+	} else if (taper <= 3) {
+		unit_taper = 0;
+	}
+
+	float taper_z = radius * (1.0 - unit_taper * z);
+
+	if (taper < 1) {
+		return max(0.001f, taper_z);
+	} else {
+		float z2 = (1.0 - z) * length;
+		float depth;
+		if (taper < 2 || z2 < taper_z) {
+			depth = 1;
+		} else {
+			depth = taper - 2;
+		}
+
+		float z3;
+		if (taper < 2) {
+			z3 = z2;
+		} else {
+			z3 = fabs(z2 - 2 * taper_z * (int)(z2 / (2.0f * taper_z) + 0.5));
+		}
+
+		if (taper < 2 && z3 > taper_z) {
+			return max(0.001f, taper_z);
+		} else {
+			return max(0.001, (1.0 - depth) * taper_z + depth * sqrtf(taper_z * taper_z - (z3 - taper_z) * (z3 - taper_z)));
+		}
 	}
 }
 
