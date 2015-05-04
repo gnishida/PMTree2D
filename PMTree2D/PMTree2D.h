@@ -30,8 +30,8 @@ public:
 class PMTree2D {
 public:
 	int shape;
-	int curveRes;
 	int levels;
+	int curveRes;
 	vector<float> base;
 	vector<int> curve;
 	vector<int> curveV;

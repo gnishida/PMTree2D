@@ -352,7 +352,7 @@ void PMTree2D::generateSegment(int level, int index, glm::mat4 modelMat, float r
 
 		glm::mat4 modelMat2 = glm::rotate(modelMat, deg2rad(downAngle[level + 1]), glm::vec3(0, 0, 1));
 
-		float sub_ratio = ratio[level + 1] * shapeRatio(shape, (length - offset) / length);
+		float sub_ratio = ratio[level + 1] * shapeRatio(shape, (length - offset) / (length * (1.0 - base[level])));
 
 		generateStem(level + 1, modelMat2, radius1 * sub_ratio, length * sub_ratio);
 
